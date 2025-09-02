@@ -3,7 +3,17 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 
+/**
+ * Player
+ *
+ * @property WebSocket websocket
+ */
 class Player {
+    /**
+     * 
+     * @param {String} name 
+     * @param {WebSocket} websocket 
+     */
     constructor(name, websocket) {
         this.name = name;
         this.websocket = websocket;
@@ -13,6 +23,11 @@ class Player {
         this.level = 1;
     }
 
+    /***
+     * Send a message back to the client via the websocket.
+     *
+     * @param {string} message
+     */
     sendMessage(message) {
         if (this.websocket.readyState === WebSocket.OPEN) {
             this.websocket.send(JSON.stringify({
@@ -28,6 +43,13 @@ class Player {
 }
 
 class Room {
+    /**
+     * 
+     * @param {string} id 
+     * @param {string} name 
+     * @param {string} description 
+     * @param {string[]} exits 
+     */
     constructor(id, name, description, exits = {}) {
         this.id = id;
         this.name = name;
@@ -38,22 +60,45 @@ class Room {
         this.npcs = [];
     }
 
+    /**
+     * Add a player to the list of active players.
+     * 
+     * (an active player is a player that currently has an active web socketA)
+     * 
+     * @param {Player} player 
+     */
     addPlayer(player) {
         this.players.add(player);
         this.broadcastToRoom(`${player.name} enters the room.`, player);
     }
 
+    /**
+     * Remove a player from the list of active players.
+     * 
+     * (an active player is a player that currently has an active web socketA)
+     * 
+     * @param {Player} player 
+     */
     removePlayer(player) {
         this.players.delete(player);
         this.broadcastToRoom(`${player.name} leaves the room.`, player);
     }
 
+    /**
+     * Send a message to all other players in this room.
+     * 
+     * @param {string} message 
+     * @param {Player} excludePlayer A single player to exclude from the broadcast
+     */
     broadcastToRoom(message, excludePlayer = null) {
-        for (const player of this.players) {
-            if (player !== excludePlayer) {
-                player.sendMessage(message);
-            }
-        }
+        // for (const player of this.players) {
+        //     if (player !== excludePlayer) {
+        //         player.sendMessage(message);
+        //     }
+        // }
+        this.getPlayersExcept(excludePlayer).forEach((player) => {
+            player.sendMessage(message);
+        })
     }
 
     getPlayersExcept(excludePlayer) {
@@ -104,9 +149,13 @@ class MudServer {
         this.rooms.set('deep_forest', deepForest);
     }
 
+    /**
+     * 
+     * @param {WebSocket} ws 
+     */
     handleConnection(ws) {
         console.log('New connection established');
-        
+
         ws.send(JSON.stringify({
             type: 'message',
             content: 'Welcome to the WebSocket MUD!\nWhat is your character name?'
@@ -126,6 +175,12 @@ class MudServer {
         });
     }
 
+    /**
+     * 
+     * @param {WebSocket} ws 
+     * @param {strings} message 
+     * @returns 
+     */
     handleMessage(ws, message) {
         const player = this.players.get(ws);
 
@@ -147,6 +202,11 @@ class MudServer {
         this.processCommand(player, message.content.trim());
     }
 
+    /**
+     * 
+     * @param {WebSocket} ws 
+     * @param {string} name 
+     */
     createPlayer(ws, name) {
         const player = new Player(name, ws);
         this.players.set(ws, player);
@@ -159,6 +219,11 @@ class MudServer {
         this.showRoom(player);
     }
 
+    /**
+     * 
+     * @param {Player} player 
+     * @param {string} input 
+     */
     processCommand(player, input) {
         const args = input.toLowerCase().split(' ');
         const command = args[0];
@@ -232,6 +297,12 @@ class MudServer {
         player.sendPrompt();
     }
 
+    /**
+     * 
+     * @param {Player} player 
+     * @param {*} direction 
+     * @returns 
+     */
     movePlayer(player, direction) {
         const currentRoom = this.rooms.get(player.currentRoom);
         const newRoomId = currentRoom.exits[direction];
@@ -278,7 +349,7 @@ class MudServer {
     sayToRoom(player, message) {
         const room = this.rooms.get(player.currentRoom);
         const fullMessage = `${player.name} says: "${message}"`;
-        
+
         room.broadcastToRoom(fullMessage, player);
         player.sendMessage(`You say: "${message}"`);
     }
@@ -314,7 +385,7 @@ Available Commands:
         const player = this.players.get(ws);
         if (player) {
             console.log(`Player ${player.name} disconnected`);
-            
+
             // Remove from room
             const room = this.rooms.get(player.currentRoom);
             if (room) {
@@ -332,7 +403,7 @@ Available Commands:
 const server = http.createServer((req, res) => {
     let filePath = path.join(__dirname, 'public', req.url === '/' ? 'index.html' : req.url);
     const ext = path.extname(filePath);
-    
+
     let contentType = 'text/html';
     if (ext === '.js') contentType = 'application/javascript';
     if (ext === '.css') contentType = 'text/css';
