@@ -404,9 +404,18 @@ const server = http.createServer((req, res) => {
     let filePath = path.join(__dirname, 'public', req.url === '/' ? 'index.html' : req.url);
     const ext = path.extname(filePath);
 
-    let contentType = 'text/html';
-    if (ext === '.js') contentType = 'application/javascript';
-    if (ext === '.css') contentType = 'text/css';
+    const contentTypes = {
+        '.js': 'application/javascript',
+        '.css': 'text/css',
+        '.html': 'text/html',
+    };
+
+    if (!contentType[ext]) {
+        // Invalid file, pretend it did not exist!
+        res.writeHead(404);
+        res.end('File not found');
+        return;
+    }
 
     fs.readFile(filePath, (err, data) => {
         if (err) {
