@@ -1,0 +1,48 @@
+┌────────────────────────────────────────────────────────────────────────────────┐┌────────────────────────────────────────────────────────────────────────────┐
+│There are several objects here.                                                 ││Weapons                                                                     │
+│Really attack Annootok? (yes|no) no                                             ││k) 4 blessed daggers                                                        │
+│What do you want to use or apply? [dimPR or ?*]                                 ││M) 4 blessed daggers (at the ready)                                         │
+│V - a blessed scroll labeled ASHPD SODALG.                                      ││l) 2 uncursed elven daggers                                                 │
+│j - 2 uncursed scrolls labeled DAIYEN FOOELS.                                   ││a) blessed rustproof +1 Excalibur (weapon in hand)                          │
+│D - an uncursed scroll labeled ELAM EBOW.                                       ││Armor                                                                       │
+│W - 2 cursed scrolls labeled GNIK SISI VLE.                                     ││O) blessed +1 orcish helm (being worn)                                      │
+│s - 2 uncursed scrolls labeled HACKEM MUCHE.                                    ││L) blessed rusty +1 pair of gauntlets of power (being worn)                 │
+│p - an uncursed scroll labeled KIRJE.  u - an uncursed scroll labeled TEMOV.    ││y) uncursed +0 pair of iron shoes (being worn)                              │
+│Q - 2 uncursed scrolls labeled VELOX NEB.                                       ││c) uncursed +3 small shield (being worn)                                    │
+│X - a blessed scroll labeled VERR YED HORRE.                                    ││C) uncursed +0 leather cloak (being worn)                                   │
+│What do you want to drop? [a-npqsuyzC-ELMO-RV-X or ?*]                          ││q) uncursed mummy wrapping                                                  │
+│You drop a blessed scroll labeled ASHPD SODALG.                                 ││f) uncursed +0 ring mail (being worn)                                       │
+│Annootok offers 30 gold pieces for your scroll labeled ASHPD SODALG.  Sell it?  ││Comestibles                                                                 │
+│[ynaq] (y)                                                                      ││n) uncursed food ration                                                     │
+│V - a blessed scroll labeled ASHPD SODALG.                                      ││z) 2 uncursed pancakes                                                      │
+│What do you want to call? [dgijmpsuyDELO-RV-X or ?*]                            ││h) uncursed sprig of wolfsbane                                              │
+│Call a scroll labeled ASHPD SODALG: ASHPD enchARM|rmvCUR|enchWEP                ││b) 2 uncursed eggs                                                          │
+└────────────────────────────────────────────────────────────────────────────────┘│e) 2 uncursed lichen corpses                                                │
+┌────────────────────────────────────────────────────────────────────────────────┐│Scrolls                                                                     │
+│                                                                                ││j) 2 uncursed scrolls labeled DAIYEN FOOELS                                 │
+│                                                                 ����������Ŀ   ││PD) uncursed scroll labeled ELAM EBOW                                        │
+│  �����Ŀ        ��������������������������������*[���[[���������������������   ││TW) 2 cursed scrolls labeled GNIK SISI VLE                                   │
+│  �����>���[��)��       ���������������Ŀ��������������Ŀ          �����������   ││ms) 2 uncursed scrolls labeled HACKEM MUCHE                                  │
+│  �����[� ����������    ������������������ ��������������    ���������������   ││dp) uncursed scroll labeled KIRJE                                            │
+│  � �����          ����������������������  ��������������    �   ���<�������   ││Uu) uncursed scroll labeled TEMOV                                            │
+│                       ���������������������������������������   �����������   ││GQ) 2 uncursed scrolls labeled VELOX NEB                                     │
+│                       ����������������������������������        ������������   ││X) blessed scroll labeled VERR YED HORRE                                    │
+│                       ��������Ŀ������������������Ŀ�����                        ││V) blessed scroll called ASHPD enchARM|rmvCUR|enchWEP                       │
+│                       ���������������������������� �����                       ││Wands                                                                       │
+│                       ��������������������������!!%�����                       ││R) uncursed wand called slow monster                                        │
+│                       �����������������������_��%(%�����                       ││P) uncursed wand of digging                                                 │
+│                       ��������������������������%%%�����                       ││Tools                                                                       │
+│                       �������Ŀ�������Ŀ����������Ĵ�[��[�                        ││m) uncursed bag called sack containing 2 items                              │
+│                       ����%@)/�����((((�%�    �(��������������� �������Ŀ       ││d) uncursed lamp                                                            │
+│    *���������Ŀ        ��B��?*)�����((]����    �(((����(�      � ���������      ││Gems/Stones                                                                 │
+│    *��[�������������������@����������+  � �(((���������       �����������      ││g) uncursed green gem named 3449                                            │
+│    �*����������       ����������������������������������        ���������      ││E) uncursed violet gem named COLDR ESP FIRER                                │
+│    0�����������       ����������������������������������        ���������      ││i) uncursed stone called gray not load                                      │
+│    ������������       ����������������������������������                       ││                                                                            │
+│                                                                                ││                                                                            │
+└────────────────────────────────────────────────────────────────────────────────┘│                                                                            │
+┌────────────────────────────────────────────────────────────────────────────────┐│                                                                            │
+│[M0ll13 the Fighter            ]  St:25 Dx:16 Co:18 In:8 Wi:12 Ch:7             ││                                                                            │
+│Lawful  $:0  HP:63(63)  Pw:26(26)  AC:-3  Xp:8                                  ││                                                                            │
+│Dlvl:6  T:10818                                                                 ││                                                                            │
+└────────────────────────────────────────────────────────────────────────────────┘└────────────────────────────────────────────────────────────────────────────┘

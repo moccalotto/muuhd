@@ -5,7 +5,6 @@ const fs = require('fs');
 
 /**
  * Player
- *
  * @property WebSocket websocket
  */
 class Player {

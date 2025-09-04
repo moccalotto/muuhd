@@ -1,0 +1,51 @@
+= The world
+
+== Character
+
+* Resides in a <<Location>>.
+* Can move from one <<Location>> to another by using <<Portal,Portals>>
+* Has properties like
+    ** Name, Race
+    ** Money, XP, Level
+    ** Strength Dex, Etc.
+* Can <<Encounter>> stuff.
+* Can talk (chat) with other characters in the same <<Location>>.
+
+== Location
+* Has a name
+* Has a default description that is read when the location is entered.
+* Can be almost any size. Typically, a Location is a room, but it can
+  be a clearing in a forest, the inside of a Dragon's guts, 
+* Has a map of of outbound <<Portal,Portals>>
+    ** `key`: string, typically `"north"`, `"east"`, etc., but
+        it can also be more interesting such as `"trap door"`.
+    ** `value`: A <<Portal>>.
+* Does not need know about inbound portals.
+* Can contain (or generate) Encounters.
+
+
+== Portal
+* A *One Way* transport to a given <<Location>>.
+* Description (optional) that will be displayed when it is examined
+  (For instance, if it's a door, this description describes how the door
+  looks).
+* SourceEncounter (optional) Can be guarded by an encounter that triggers only
+  when you attempt to approach the portal. The encounter can be a simple lock,
+  a puzzle, or a guardian.
+* ArrivalEncounter (optional) Can trigger an encounter that occurs as soon as you
+  enter the target <<Location>>.
+* ArrivalDescription (optional) A text that overrides the default text that you
+  would normally see upon entering a <<Location>>. If the player executes a
+  `look` command, the normal description will be shown.
+* TargetSight (bool,false) Allows you to `look` into the target <<Location>>,
+  getting an idea of what you are about to get into.
+* A door between two rooms is typically represented via two <<Portal,Portals>>;
+  one one each direction.
+
+== Encounter
+
+* Can be one (or more) of:
+    ** Roleplay Encounter (NPC)
+    ** Combat Encounter (monsters)
+    ** Environmental Encounter (Trap, Puzzle)
+    ** Loot
