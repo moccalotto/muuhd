@@ -7,11 +7,12 @@
  * Serializing this object effectively saves the game.
  */
 
+import WebSocket from "ws";
 import { Character } from "./character";
 import { ItemTemplate } from "./item";
 
 class Game{
-    
+
     /** @type {Map<string,ItemTemplate>} List of all item templates in the game */
     _itemTemplates = new Map();
 
@@ -26,9 +27,15 @@ class Game{
      */
     _characters = new Map();
 
-    /** 
+    /**
      * @protected
-     * @type {Map<string,Player>} The list of users in the game
+     * @type {Map<string,Player>} Map of users in the game username->Player
      */
-    _players = new Map();
+    _playersByName = new Map();
+
+    /**
+     * @protected
+     * @type {Map<WebSocket,Player>} Map of users in the game username->Player
+     */
+    _playersBySocket = new Map();
 }

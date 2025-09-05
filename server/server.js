@@ -1,194 +1,73 @@
-const WebSocket = require('ws');
-const http = require('http');
-const path = require('path');
-const fs = require('fs');
+import WebSocket, { WebSocketServer } from "ws";
+import http from "http";
+import path from "path";
+import fs from "fs";
+import { Player } from "./models/player.js";
+import { Game } from "./models/game.js";
+
 
 /**
- * Player
- * @property WebSocket websocket
+ * Parse a string with json-encoded data without throwing exceptions.
+ *
+ * @param {string} data
+ * @return {any}
  */
-class Player {
-    /**
-     * 
-     * @param {String} name 
-     * @param {WebSocket} websocket 
-     */
-    constructor(name, websocket) {
-        this.name = name;
-        this.websocket = websocket;
-        this.currentRoom = 'town_square';
-        this.health = 100;
-        this.inventory = [];
-        this.level = 1;
+function parseJson(data) {
+    if (typeof data !== "string") {
+        console.error("Attempting to parse json, but data was not even a string", data);
+        return;
     }
 
-    /***
-     * Send a message back to the client via the websocket.
-     *
-     * @param {string} message
-     */
-    sendMessage(message) {
-        if (this.websocket.readyState === WebSocket.OPEN) {
-            this.websocket.send(JSON.stringify({
-                type: 'message',
-                content: message
-            }));
-        }
-    }
-
-    sendPrompt() {
-        this.sendMessage(`\n[${this.currentRoom}] > `);
-    }
-}
-
-class Room {
-    /**
-     * 
-     * @param {string} id 
-     * @param {string} name 
-     * @param {string} description 
-     * @param {string[]} exits 
-     */
-    constructor(id, name, description, exits = {}) {
-        this.id = id;
-        this.name = name;
-        this.description = description;
-        this.exits = exits; // { north: 'room_id', south: 'room_id' }
-        this.players = new Set();
-        this.items = [];
-        this.npcs = [];
-    }
-
-    /**
-     * Add a player to the list of active players.
-     * 
-     * (an active player is a player that currently has an active web socketA)
-     * 
-     * @param {Player} player 
-     */
-    addPlayer(player) {
-        this.players.add(player);
-        this.broadcastToRoom(`${player.name} enters the room.`, player);
-    }
-
-    /**
-     * Remove a player from the list of active players.
-     * 
-     * (an active player is a player that currently has an active web socketA)
-     * 
-     * @param {Player} player 
-     */
-    removePlayer(player) {
-        this.players.delete(player);
-        this.broadcastToRoom(`${player.name} leaves the room.`, player);
-    }
-
-    /**
-     * Send a message to all other players in this room.
-     * 
-     * @param {string} message 
-     * @param {Player} excludePlayer A single player to exclude from the broadcast
-     */
-    broadcastToRoom(message, excludePlayer = null) {
-        // for (const player of this.players) {
-        //     if (player !== excludePlayer) {
-        //         player.sendMessage(message);
-        //     }
-        // }
-        this.getPlayersExcept(excludePlayer).forEach((player) => {
-            player.sendMessage(message);
-        })
-    }
-
-    getPlayersExcept(excludePlayer) {
-        return Array.from(this.players).filter(p => p !== excludePlayer);
+    try {
+        return JSON.parse(data)
+    } catch (error) {
+        console.error('Error parsing data as json:', error, data);
     }
 }
 
 class MudServer {
     constructor() {
-        this.players = new Map(); // websocket -> Player
-        this.rooms = new Map();
-        this.playersByName = new Map(); // name -> Player
-        this.initializeRooms();
-    }
-
-    initializeRooms() {
-        const townSquare = new Room(
-            'town_square',
-            'Town Square',
-            'You are standing in the bustling town square. A fountain sits in the center, and cobblestone paths lead in all directions. The inn lies to the north, and a mysterious forest path leads east.',
-            { north: 'inn', east: 'forest_entrance' }
-        );
-
-        const inn = new Room(
-            'inn',
-            'The Rusty Dragon Inn',
-            'A cozy tavern filled with the aroma of hearty stew and ale. Adventurers gather around wooden tables, sharing tales of their exploits.',
-            { south: 'town_square' }
-        );
-
-        const forestEntrance = new Room(
-            'forest_entrance',
-            'Forest Entrance',
-            'The edge of a dark, mysterious forest. Ancient trees tower overhead, and you can hear strange sounds echoing from within.',
-            { west: 'town_square', north: 'deep_forest' }
-        );
-
-        const deepForest = new Room(
-            'deep_forest',
-            'Deep Forest',
-            'You are deep within the forest. Shadows dance between the trees, and you feel like you\'re being watched.',
-            { south: 'forest_entrance' }
-        );
-
-        this.rooms.set('town_square', townSquare);
-        this.rooms.set('inn', inn);
-        this.rooms.set('forest_entrance', forestEntrance);
-        this.rooms.set('deep_forest', deepForest);
+        this.game = new Game();
     }
 
     /**
-     * 
      * @param {WebSocket} ws 
      */
-    handleConnection(ws) {
+    onConnectionEstabished(ws) {
         console.log('New connection established');
 
-        ws.send(JSON.stringify({
-            type: 'message',
-            content: 'Welcome to the WebSocket MUD!\nWhat is your character name?'
-        }));
-
+        ws.send(JSON.stringify(
+            ["m", "Welcome to the WebSocket MUD!\nWhat is your username name?"]
+        ));
         ws.on('message', (data) => {
-            try {
-                const message = JSON.parse(data);
-                this.handleMessage(ws, message);
-            } catch (error) {
-                console.error('Error parsing message:', error);
-            }
+            this.onIncomingMessage(parseJson(data));
         });
 
         ws.on('close', () => {
-            this.handleDisconnection(ws);
+            this.onConnectionClosed(ws);
         });
     }
 
     /**
-     * 
      * @param {WebSocket} ws 
      * @param {strings} message 
      * @returns 
      */
-    handleMessage(ws, message) {
+    onIncomingMessage(ws, message) {
         const player = this.players.get(ws);
 
         if (!player) {
             // Player hasn't been created yet, expecting name
             const name = message.content.trim();
-            if (name && !this.playersByName.has(name)) {
+            if (name && !this.players.has(name)) {
                 this.createPlayer(ws, name);
             } else {
+                /**
+                 * @todo: send an array instead of object.
+                 * element 1 is the type
+                 * element 2 is the content
+                 * element 3+ are expansions
+                 */
                 ws.send(JSON.stringify({
                     type: 'message',
                     content: 'Invalid name or name already taken. Please choose another:'
@@ -209,9 +88,9 @@ class MudServer {
     createPlayer(ws, name) {
         const player = new Player(name, ws);
         this.players.set(ws, player);
-        this.playersByName.set(name, player);
+        this.players.set(name, player);
 
-        const startRoom = this.rooms.get(player.currentRoom);
+        const startRoom = this.rooms.get("town_square");
         startRoom.addPlayer(player);
 
         player.sendMessage(`Welcome, ${name}! You have entered the world.`);
@@ -354,7 +233,7 @@ class MudServer {
     }
 
     showOnlinePlayers(player) {
-        const playerList = Array.from(this.playersByName.keys());
+        const playerList = Array.from(this.players.keys());
         player.sendMessage(`Online players (${playerList.length}): ${playerList.join(', ')}`);
     }
 
@@ -380,7 +259,10 @@ Available Commands:
         player.sendMessage(helpText);
     }
 
-    handleDisconnection(ws) {
+    /**
+     * Called when a websocket connection is closing.
+     */
+    onConnectionClosed(ws) {
         const player = this.players.get(ws);
         if (player) {
             console.log(`Player ${player.name} disconnected`);
@@ -393,14 +275,15 @@ Available Commands:
 
             // Clean up references
             this.players.delete(ws);
-            this.playersByName.delete(player.name);
+            this.players.delete(player.name);
         }
     }
 }
 
 // Create HTTP server for serving the client
 const server = http.createServer((req, res) => {
-    let filePath = path.join(__dirname, 'public', req.url === '/' ? 'index.html' : req.url);
+    // let filePath = path.join(__dirname, 'public', req.url === '/' ? 'index.html' : req.url);
+    let filePath = path.join('public', req.url === '/' ? 'index.html' : req.url);
     const ext = path.extname(filePath);
 
     const contentTypes = {
@@ -409,12 +292,14 @@ const server = http.createServer((req, res) => {
         '.html': 'text/html',
     };
 
-    if (!contentType[ext]) {
+    if (!contentTypes[ext]) {
         // Invalid file, pretend it did not exist!
         res.writeHead(404);
         res.end('File not found');
         return;
     }
+
+    const contentType = contentTypes[ext];
 
     fs.readFile(filePath, (err, data) => {
         if (err) {
@@ -428,11 +313,11 @@ const server = http.createServer((req, res) => {
 });
 
 // Create WebSocket server
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocketServer({ server });
 const mudServer = new MudServer();
 
 wss.on('connection', (ws) => {
-    mudServer.handleConnection(ws);
+    mudServer.onConnectionEstabished(ws);
 });
 
 const PORT = process.env.PORT || 3000;

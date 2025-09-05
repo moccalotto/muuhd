@@ -11,52 +11,21 @@ export class Character {
     /** @type {string} character's name */
     name;
 
-    /**
-     * Alive?
-     *
-     * @protected
-     * @type {boolean}
-     */
-    _alive = true;
-    get alive() {
-        return _alive;
-    }
-
-    /**
-     * @protected
-     * @type {number} The number of XP the character has.
-     */
+    /** @protected @type {number} The number of XP the character has. */
     _xp = 0;
-    get xp() {
-        return this._xp;
-    }
+    get xp() { return this._xp; }
 
-    /**
-     * @protected 
-     * @type {number} The character's level.
-     */
+    /** @protected @type {number} The character's level. */
     _level = 1;
-    get level() {
-        return this._level;
-    }
+    get level() { return this._level; }
 
-    /** 
-     * @protected
-     * @type {string} unique name used for chats when there's a name clash and also other things that require a unique character id 
-     */
+    /** @protected @type {string} unique name used for chats when there's a name clash and also other things that require a unique character id */
     _id;
-    get id() {
-        return this._id;
-    }
+    get id() { return this._id; }
 
-    /**
-     * @protected
-     * @type {string} username of the player that owns this character.
-     */
+    /** @protected @type {string} username of the player that owns this character. */
     _username;
-    get username() {
-        return this._username;
-    }
+    get username() { return this._username; }
 
     /** @type {string} Bloodline background */
     ancestry;
@@ -83,7 +52,7 @@ export class Character {
     equipment = new Map();
 
     /**
-     * @param {string} playerUname The name of player who owns this character. Note that the game can own a character - somehow.
+     * @param {string} username The name of player who owns this character. Note that the game can own a character - somehow.
      * @param {string} name The name of the character
      * @param {boolean} initialize Should we initialize the character
      */
