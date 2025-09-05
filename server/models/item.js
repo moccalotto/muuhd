@@ -1,4 +1,4 @@
-import { cleanIdentifier } from "../utils/helpers";
+import { cleanName } from "../utils/id.js";
 
 /**
  * Item templates are the built-in basic items of the game.
@@ -56,7 +56,7 @@ export class ItemTemplate {
             throw new Error("itemSlots must be a finite number!");
         }
         if (typeof id === "undefined") {
-            id = cleanIdentifier(name);
+            id = cleanName(name);
         }
         if (typeof id !== "string") {
             throw new Error("id must be a string!");

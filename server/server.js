@@ -4,90 +4,147 @@ import path from "path";
 import fs from "fs";
 import { Player } from "./models/player.js";
 import { Game } from "./models/game.js";
+import { ClientMessage, MSG_ERROR, MSG_MESSAGE, MSG_PROMPT, MSG_CALAMITY } from "./utils/messages.js";
 
+class Session {
+    /** @type {boolean} */
+    usernameProcessed = false;
 
-/**
- * Parse a string with json-encoded data without throwing exceptions.
- *
- * @param {string} data
- * @return {any}
- */
-function parseJson(data) {
-    if (typeof data !== "string") {
-        console.error("Attempting to parse json, but data was not even a string", data);
-        return;
-    }
+    /** @type {boolean} */
+    passwordProcessed = false;
 
-    try {
-        return JSON.parse(data)
-    } catch (error) {
-        console.error('Error parsing data as json:', error, data);
-    }
+    /** @type {boolean} */
+    ready = false;
+
+    /** @type Date */
+    latestPing;
+
+    /** @type {Player} */
+    player;
 }
 
 class MudServer {
-    constructor() {
-        this.game = new Game();
+    /** @type {Map<WebSocket,Session>} */
+    sessions = new Map();
+
+    /** @type {Game} */
+    game = new Game();
+
+    /**
+     * Send a message via a websocket.
+     *
+     * @param {WebSocket} websocket
+     * @param {string|number} messageType
+     * @param {...any} args
+     */
+    send(websocket, messageType, ...args) {
+        // create array consisting of [messageType, args[0], args[1], ... ];
+        websocket.send(JSON.stringify([messageType, ...args]));
     }
 
     /**
-     * @param {WebSocket} ws 
+     * @param {WebSocket} websocket
      */
-    onConnectionEstabished(ws) {
-        console.log('New connection established');
+    onConnectionEstabished(websocket) {
+        console.log("New connection established");
+        this.sessions[websocket] = new Session();
 
-        ws.send(JSON.stringify(
-            ["m", "Welcome to the WebSocket MUD!\nWhat is your username name?"]
-        ));
-        ws.on('message', (data) => {
-            this.onIncomingMessage(parseJson(data));
-        });
+        websocket.on("message", (data) => { this.onIncomingMessage(websocket, data) });
+        websocket.on("close", () => { this.onConnectionClosed(websocket); });
 
-        ws.on('close', () => {
-            this.onConnectionClosed(ws);
-        });
+        this.send(websocket, MSG_MESSAGE, "Welcome to MUUUHD", "big");
+        this.send(websocket, MSG_PROMPT, "Please enter your username");
     }
 
     /**
-     * @param {WebSocket} ws 
-     * @param {strings} message 
-     * @returns 
+     * @param {WebSocket} websocket
+     * @param {strings} data
      */
-    onIncomingMessage(ws, message) {
-        const player = this.players.get(ws);
+    onIncomingMessage(websocket, data) {
+        const session = this.sessions.get(websocket);
 
-        if (!player) {
-            // Player hasn't been created yet, expecting name
-            const name = message.content.trim();
-            if (name && !this.players.has(name)) {
-                this.createPlayer(ws, name);
-            } else {
-                /**
-                 * @todo: send an array instead of object.
-                 * element 1 is the type
-                 * element 2 is the content
-                 * element 3+ are expansions
-                 */
-                ws.send(JSON.stringify({
-                    type: 'message',
-                    content: 'Invalid name or name already taken. Please choose another:'
-                }));
+        if (!session) {
+            console.error("Incoming message from a client without a session!", data);
+            this.send(websocket, MSG_ERROR, "terminal", "You do not have an active session. Go away!")
+            websocket.close();
+            return
+        }
+
+        let message;
+
+        try {
+            message = new ClientMessage(data);
+        } catch (error) {
+            console.error("Bad websocket message", data, error);
+            this.send(websocket, MSG_ERROR, "terminal", "You sent me a bad message! Goodbye...")
+            websocket.close();
+            return
+        }
+
+        if (!session.usernameProcessed) {
+            //
+            //----------------------------------------------------
+            // We haven"t gotten a username yet, so we expect one.
+            //----------------------------------------------------
+            if (!message.hasUsername()) {
+                console.error("User should have sent a “username” message, but sent something else instead")
+                this.send(websocket, MSG_CALAMITY, "I expected you to send me a username, but you sent me something else instead. You bad! Goodbye...")
+
+                // for now, just close the socket.
+                websocket.close();
             }
+
+            const player = this.game.players.get(message.username);
+
+            if (!player) {
+                // player not found - for now, just close the connection - make a better 
+                console.log("Invalid username sent during login: %s", username);
+                this.send(websocket, MSG_ERROR, "Invalid username");
+                this.send(websocket, MSG_PROMPT, "Please enter a valid username");
+            }
+
+            // correct username, tentatively assign player to session
+            // even though we have not yet validated the password.
+            session.player = player;
+            session.usernameProcessed = true;
+            this.send(websocket, MSG_MESSAGE, "Username received");
+            this.send(websocket, MSG_PROMPT, "Enter your password");
+
             return;
         }
 
-        // Process command
-        this.processCommand(player, message.content.trim());
+        //
+        //----------------------------------------------------
+        // The player has entered a valid username, now expect
+        // a password.
+        //----------------------------------------------------
+        if (!session.passwordProcessed) {
+            if (!message.hasPassword) {
+                console.error("Youser should have sent a “password” message, but sent this instead: %s", message.type);
+            }
+        }
+
+
+        //
+        //----------------------------------------------------
+        // Process the player's commands
+        //----------------------------------------------------
+        if (message.isCommand()) {
+            // switch case for commands.
+            return;
+        }
+
+        console.error("We have received a message we couldn't handle!!!", message);
     }
 
     /**
-     * 
-     * @param {WebSocket} ws 
-     * @param {string} name 
+     *
+     * @param {WebSocket} websocket
+     * @param {string} name
      */
-    createPlayer(ws, name) {
-        const player = new Player(name, ws);
-        this.players.set(ws, player);
+    createPlayer(websocket, name) {
+        const player = new Player(name, websocket);
+        this.players.set(websocket, player);
         this.players.set(name, player);
 
         const startRoom = this.rooms.get("town_square");
@@ -98,204 +155,121 @@ class MudServer {
     }
 
     /**
-     * 
-     * @param {Player} player 
-     * @param {string} input 
+     *
+     * @param {Player} player
+     * @param {string} input
      */
     processCommand(player, input) {
-        const args = input.toLowerCase().split(' ');
+        const args = input.toLowerCase().split(" ");
         const command = args[0];
 
         switch (command) {
-            case 'look':
-            case 'l':
+            case "look":
+            case "l":
                 this.showRoom(player);
                 break;
 
-            case 'go':
-            case 'move':
+            case "go":
+            case "move":
                 if (args[1]) {
                     this.movePlayer(player, args[1]);
                 } else {
-                    player.sendMessage('Go where?');
+                    player.sendMessage("Go where?");
                 }
                 break;
 
-            case 'north':
-            case 'n':
-                this.movePlayer(player, 'north');
+            case "north":
+            case "n":
+                this.movePlayer(player, "north");
                 break;
 
-            case 'south':
-            case 's':
-                this.movePlayer(player, 'south');
+            case "south":
+            case "s":
+                this.movePlayer(player, "south");
                 break;
 
-            case 'east':
-            case 'e':
-                this.movePlayer(player, 'east');
+            case "east":
+            case "e":
+                this.movePlayer(player, "east");
                 break;
 
-            case 'west':
-            case 'w':
-                this.movePlayer(player, 'west');
+            case "west":
+            case "w":
+                this.movePlayer(player, "west");
                 break;
 
-            case 'say':
+            case "say":
                 if (args.length > 1) {
-                    const message = args.slice(1).join(' ');
+                    const message = args.slice(1).join(" ");
                     this.sayToRoom(player, message);
                 } else {
-                    player.sendMessage('Say what?');
+                    player.sendMessage("Say what?");
                 }
                 break;
 
-            case 'who':
+            case "who":
                 this.showOnlinePlayers(player);
                 break;
 
-            case 'inventory':
-            case 'inv':
+            case "inventory":
+            case "inv":
                 this.showInventory(player);
                 break;
 
-            case 'help':
+            case "help":
                 this.showHelp(player);
                 break;
 
-            case 'quit':
-                player.sendMessage('Goodbye!');
+            case "quit":
+                player.sendMessage("Goodbye!");
                 player.websocket.close();
                 break;
 
             default:
-                player.sendMessage(`Unknown command: ${command}. Type 'help' for available commands.`);
+                player.sendMessage(`Unknown command: ${command}. Type "help" for available commands.`);
         }
 
         player.sendPrompt();
     }
 
     /**
-     * 
-     * @param {Player} player 
-     * @param {*} direction 
-     * @returns 
-     */
-    movePlayer(player, direction) {
-        const currentRoom = this.rooms.get(player.currentRoom);
-        const newRoomId = currentRoom.exits[direction];
-
-        if (!newRoomId) {
-            player.sendMessage('You cannot go that way.');
-            return;
-        }
-
-        const newRoom = this.rooms.get(newRoomId);
-        if (!newRoom) {
-            player.sendMessage('That area is not accessible right now.');
-            return;
-        }
-
-        // Remove from current room and add to new room
-        currentRoom.removePlayer(player);
-        player.currentRoom = newRoomId;
-        newRoom.addPlayer(player);
-
-        this.showRoom(player);
-    }
-
-    showRoom(player) {
-        const room = this.rooms.get(player.currentRoom);
-        let description = `\n=== ${room.name} ===\n`;
-        description += `${room.description}\n`;
-
-        // Show exits
-        const exits = Object.keys(room.exits);
-        if (exits.length > 0) {
-            description += `\nExits: ${exits.join(', ')}`;
-        }
-
-        // Show other players
-        const otherPlayers = room.getPlayersExcept(player);
-        if (otherPlayers.length > 0) {
-            description += `\nPlayers here: ${otherPlayers.map(p => p.name).join(', ')}`;
-        }
-
-        player.sendMessage(description);
-    }
-
-    sayToRoom(player, message) {
-        const room = this.rooms.get(player.currentRoom);
-        const fullMessage = `${player.name} says: "${message}"`;
-
-        room.broadcastToRoom(fullMessage, player);
-        player.sendMessage(`You say: "${message}"`);
-    }
-
-    showOnlinePlayers(player) {
-        const playerList = Array.from(this.players.keys());
-        player.sendMessage(`Online players (${playerList.length}): ${playerList.join(', ')}`);
-    }
-
-    showInventory(player) {
-        if (player.inventory.length === 0) {
-            player.sendMessage('Your inventory is empty.');
-        } else {
-            player.sendMessage(`Inventory: ${player.inventory.join(', ')}`);
-        }
-    }
-
-    showHelp(player) {
-        const helpText = `
-Available Commands:
-- look, l: Look around the current room
-- go <direction>, <direction>: Move in a direction (north, south, east, west, n, s, e, w)
-- say <message>: Say something to other players in the room
-- who: See who else is online
-- inventory, inv: Check your inventory
-- help: Show this help message
-- quit: Leave the game
-        `;
-        player.sendMessage(helpText);
-    }
-
-    /**
      * Called when a websocket connection is closing.
+     *
+     * @param {WebSocket} websocket
      */
-    onConnectionClosed(ws) {
-        const player = this.players.get(ws);
-        if (player) {
-            console.log(`Player ${player.name} disconnected`);
+    onConnectionClosed(websocket) {
+        const session = this.sessions.get(websocket);
 
-            // Remove from room
-            const room = this.rooms.get(player.currentRoom);
-            if (room) {
-                room.removePlayer(player);
-            }
+        if (session && session.player) {
+            console.log(`Player ${player.username} disconnected`);
 
-            // Clean up references
-            this.players.delete(ws);
-            this.players.delete(player.name);
+            //
+            // Handle player logout (move the or hide their characters)
+            // this.game.playerLoggedOut();
+        } else {
+            console.log("A player without a session disconnected");
         }
+
+        this.sessions.delete(websocket);
     }
 }
 
 // Create HTTP server for serving the client
 const server = http.createServer((req, res) => {
-    // let filePath = path.join(__dirname, 'public', req.url === '/' ? 'index.html' : req.url);
-    let filePath = path.join('public', req.url === '/' ? 'index.html' : req.url);
+    // let filePath = path.join(__dirname, "public", req.url === "/" ? "index.html" : req.url);
+    let filePath = path.join("public", req.url === "/" ? "index.html" : req.url);
     const ext = path.extname(filePath);
 
     const contentTypes = {
-        '.js': 'application/javascript',
-        '.css': 'text/css',
-        '.html': 'text/html',
+        ".js": "application/javascript",
+        ".css": "text/css",
+        ".html": "text/html",
     };
 
     if (!contentTypes[ext]) {
         // Invalid file, pretend it did not exist!
         res.writeHead(404);
-        res.end('File not found');
+        res.end(`File ${filePath} not found (invalid $ext)`);
         return;
     }
 
@@ -304,19 +278,19 @@ const server = http.createServer((req, res) => {
     fs.readFile(filePath, (err, data) => {
         if (err) {
             res.writeHead(404);
-            res.end('File not found');
+            res.end(`File ${filePath} . ${ext} not found (${err})`);
             return;
         }
-        res.writeHead(200, { 'Content-Type': contentType });
+        res.writeHead(200, { "Content-Type": contentType });
         res.end(data);
     });
 });
 
 // Create WebSocket server
-const wss = new WebSocketServer({ server });
+const websocketServer = new WebSocketServer({ server });
 const mudServer = new MudServer();
 
-wss.on('connection', (ws) => {
+websocketServer.on("connection", (ws) => {
     mudServer.onConnectionEstabished(ws);
 });
 

@@ -132,7 +132,7 @@
                 this.updateStatus('Connecting...', 'connecting');
 
                 try {
-                    this.ws = new WebSocket(wsUrl);
+                    this. s = new WebSocket(wsUrl);
 
                     this.ws.onopen = () => {
                         this.updateStatus('Connected', 'connected');

@@ -8,10 +8,10 @@
  */
 
 import WebSocket from "ws";
-import { Character } from "./character";
-import { ItemTemplate } from "./item";
+import { Character } from "./character.js";
+import { ItemTemplate } from "./item.js";
 
-class Game{
+export class Game{
 
     /** @type {Map<string,ItemTemplate>} List of all item templates in the game */
     _itemTemplates = new Map();
@@ -28,14 +28,10 @@ class Game{
     _characters = new Map();
 
     /**
+     * All players ever registered, mapped by name => player.
+     *
      * @protected
      * @type {Map<string,Player>} Map of users in the game username->Player
      */
-    _playersByName = new Map();
-
-    /**
-     * @protected
-     * @type {Map<WebSocket,Player>} Map of users in the game username->Player
-     */
-    _playersBySocket = new Map();
+    _players = new Map(); get players() { return this._players; }
 }
