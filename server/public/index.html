@@ -4,103 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>WebSocket MUD</title>
-        <style>
-            body {
-                font-family: "Courier New", monospace;
-                background-color: #1a1a1a;
-                color: #00ff00;
-                margin: 0;
-                padding: 0;
-                height: 100vh;
-                display: flex;
-                flex-direction: column;
-            }
-
-            #container {
-                display: flex;
-                flex-direction: column;
-                height: 100vh;
-                max-width: 1200px;
-                margin: 0 auto;
-                padding: 10px;
-            }
-
-            #output {
-                flex: 1;
-                background-color: #000;
-                border: 2px solid #333;
-                padding: 15px;
-                overflow-y: auto;
-                white-space: pre-wrap;
-                font-size: 14px;
-                line-height: 1.4;
-                margin-bottom: 10px;
-            }
-
-            #input-container {
-                display: flex;
-                gap: 10px;
-            }
-
-            #input {
-                flex: 1;
-                background-color: #222;
-                border: 2px solid #333;
-                color: #00ff00;
-                padding: 10px;
-                font-family: "Courier New", monospace;
-                font-size: 14px;
-            }
-
-            #input:focus {
-                outline: none;
-                border-color: #00ff00;
-            }
-
-            #send {
-                background-color: #333;
-                border: 2px solid #555;
-                color: #00ff00;
-                padding: 10px 20px;
-                font-family: "Courier New", monospace;
-                cursor: pointer;
-            }
-
-            #send:hover {
-                background-color: #444;
-            }
-
-            #status {
-                background-color: #333;
-                padding: 5px 15px;
-                margin-bottom: 10px;
-                border-radius: 3px;
-            }
-
-            .connected {
-                color: #00ff00;
-            }
-
-            .disconnected {
-                color: #ff4444;
-            }
-
-            .connecting {
-                color: #ffaa00;
-            }
-
-            .error {
-                color: #ff4444;
-            }
-
-            .system {
-                color: #aaaaaa;
-            }
-
-            .prompt {
-                color: #00ccff;
-            }
-        </style>
+        <link rel="stylesheet" href="style.css">
     </head>
     <body>
         <div id="container">
@@ -138,7 +42,7 @@
                     this.updateStatus("Connecting...", "connecting");
 
                     try {
-                        this.s = new WebSocket(wsUrl);
+                        this.ws = new WebSocket(wsUrl);
 
                         this.ws.onopen = () => {
                             this.updateStatus("Connected", "connected");
@@ -148,6 +52,7 @@
                         };
 
                         this.ws.onmessage = (event) => {
+                            console.log(event);
                             const data = JSON.parse(event.data);
                             this.handleMessage(data);
                         };
@@ -169,6 +74,7 @@
                             );
                         };
                     } catch (error) {
+                        console.error(error);
                         this.updateStatus("Connection Failed", "error");
                         setTimeout(() => this.connect(), 3000);
                     }
@@ -254,18 +160,16 @@
                 }
 
                 handleMessage(data) {
-                    switch (data.type) {
-                        case "message":
-                            this.appendOutput(data.content);
-                            break;
+                    console.log(data);
+                    switch (data[0]) {
                         case "error":
-                            this.appendOutput(data.content, "error");
+                            this.appendOutput(data[1], "error");
                             break;
                         case "system":
-                            this.appendOutput(data.content, "system");
+                            this.appendOutput(data[1], "system");
                             break;
                         default:
-                            this.appendOutput(data.content);
+                            this.appendOutput(data[1]);
                     }
                 }
 

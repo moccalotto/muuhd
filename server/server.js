@@ -104,14 +104,8 @@ class MudServer {
             // We haven"t gotten a username yet, so we expect one.
             //----------------------------------------------------
             if (!message.hasUsername()) {
-                console.error(
-                    "User should have sent a “username” message, but sent something else instead",
-                );
-                this.send(
-                    websocket,
-                    MSG_CALAMITY,
-                   "I expected you to send me a username, but you sent me something else instead. You bad! Goodbye...",
-                );
+                console.error("User should have sent a “username” message, but sent something else instead");
+                this.send(websocket, MSG_CALAMITY, "I expected you to send me a username, but you sent me something else instead. You bad! Goodbye...");
 
                 // for now, just close the socket.
                 websocket.close();
@@ -120,7 +114,9 @@ class MudServer {
             const player = this.game.players.get(message.username);
 
             if (!player) {
-                // player not found - for now, just close the connection - make a better
+                //----------------------------------------------------
+                // Invalid Username.
+                //----------------------------------------------------
                 console.log("Invalid username sent during login: %s", username);
                 this.send(websocket, MSG_ERROR, "Invalid username");
                 this.send(
@@ -187,86 +183,6 @@ class MudServer {
     }
 
     /**
-     *
-     * @param {Player} player
-     * @param {string} input
-     */
-    processCommand(player, input) {
-        const args = input.toLowerCase().split(" ");
-        const command = args[0];
-
-        switch (command) {
-            case "look":
-            case "l":
-                this.showRoom(player);
-                break;
-
-            case "go":
-            case "move":
-                if (args[1]) {
-                    this.movePlayer(player, args[1]);
-                } else {
-                    player.sendMessage("Go where?");
-                }
-                break;
-
-            case "north":
-            case "n":
-                this.movePlayer(player, "north");
-                break;
-
-            case "south":
-            case "s":
-                this.movePlayer(player, "south");
-                break;
-
-            case "east":
-            case "e":
-                this.movePlayer(player, "east");
-                break;
-
-            case "west":
-            case "w":
-                this.movePlayer(player, "west");
-                break;
-
-            case "say":
-                if (args.length > 1) {
-                    const message = args.slice(1).join(" ");
-                    this.sayToRoom(player, message);
-                } else {
-                    player.sendMessage("Say what?");
-                }
-                break;
-
-            case "who":
-                this.showOnlinePlayers(player);
-                break;
-
-            case "inventory":
-            case "inv":
-                this.showInventory(player);
-                break;
-
-            case "help":
-                this.showHelp(player);
-                break;
-
-            case "quit":
-                player.sendMessage("Goodbye!");
-                player.websocket.close();
-                break;
-
-            default:
-                player.sendMessage(
-                    `Unknown command: ${command}. Type "help" for available commands.`,
-                );
-        }
-
-        player.sendPrompt();
-    }
-
-    /**
      * Called when a websocket connection is closing.
      *
      * @param {WebSocket} websocket
@@ -289,7 +205,7 @@ class MudServer {
 }
 
 // Create HTTP server for serving the client
-const server = http.createServer((req, res) => {
+const httpServer = http.createServer((req, res) => {
     // let filePath = path.join(__dirname, "public", req.url === "/" ? "index.html" : req.url);
     let filePath = path.join(
         "public",
@@ -324,15 +240,17 @@ const server = http.createServer((req, res) => {
 });
 
 // Create WebSocket server
-const websocketServer = new WebSocketServer({ server });
+const websocketServer = new WebSocketServer({ server: httpServer });
 const mudServer = new MudServer();
 
 websocketServer.on("connection", (ws) => {
     mudServer.onConnectionEstabished(ws);
 });
 
+// websocketServer.on("connection", mudServer.onConnectionEstabished);
+
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+httpServer.listen(PORT, () => {
     console.log(`MUD server running on port ${PORT}`);
     console.log(`WebSocket server ready for connections`);
 });
