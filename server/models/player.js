@@ -1,4 +1,4 @@
-import WebSocket from 'ws';
+import WebSocket from "ws";
 
 /**
  * Player Account.
@@ -13,18 +13,24 @@ import WebSocket from 'ws';
  * We regularly ping and pong to ensure that stale connections are closed.
  *
  */
-export class Player{
+export class Player {
     /** @protected @type {string} unique username */
     _username;
-    get username() { return this._username; }
+    get username() {
+        return this._username;
+    }
 
     /** @protected @type {string} */
     _passwordHash;
-    get passwordHash() { return this._passwordHash; }
+    get passwordHash() {
+        return this._passwordHash;
+    }
 
     /** @protected @type {WebSocket} Player's current and only websocket. If undefined, the player is not logged in. */
     _websocket;
-    get websocket() { return this._websocket; }
+    get websocket() {
+        return this._websocket;
+    }
 
     /** @protected @type {Date} */
     _latestSocketReceived;
@@ -46,7 +52,11 @@ export class Player{
      */
     _send(data) {
         if (!this._websocket) {
-            console.error("Trying to send a message to an uninitialized websocket", this, data)
+            console.error(
+                "Trying to send a message to an uninitialized websocket",
+                this,
+                data,
+            );
             return false;
         }
         if (this._websocket.readyState === WebSocket.OPEN) {
@@ -54,19 +64,36 @@ export class Player{
             return true;
         }
         if (this._websocket.readyState === WebSocket.CLOSED) {
-            console.error("Trying to send a message through a CLOSED websocket", this, data);
+            console.error(
+                "Trying to send a message through a CLOSED websocket",
+                this,
+                data,
+            );
             return false;
         }
         if (this._websocket.readyState === WebSocket.CLOSING) {
-            console.error("Trying to send a message through a CLOSING websocket", this, data);
+            console.error(
+                "Trying to send a message through a CLOSING websocket",
+                this,
+                data,
+            );
             return false;
         }
         if (this._websocket.readyState === WebSocket.CONNECTING) {
-            console.error("Trying to send a message through a CONNECTING (not yet open) websocket", this, data);
+            console.error(
+                "Trying to send a message through a CONNECTING (not yet open) websocket",
+                this,
+                data,
+            );
             return false;
         }
 
-        console.error("Trying to send a message through a websocket with an UNKNOWN readyState (%d)", this.websocket.readyState, this, data);
+        console.error(
+            "Trying to send a message through a websocket with an UNKNOWN readyState (%d)",
+            this.websocket.readyState,
+            this,
+            data,
+        );
         return false;
     }
 
@@ -74,5 +101,3 @@ export class Player{
         this.sendMessage(`\n[${this.currentRoom}] > `);
     }
 }
-
-

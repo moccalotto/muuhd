@@ -2,7 +2,10 @@ export function cleanName(s) {
     if (typeof s !== "string") {
         throw new Error("String expected, but got a ", typeof s);
     }
-    return s.toLowerCase().replace(" ", "_").replace(/[^a-zA-Z0-9_]/, "_");
+    return s
+        .toLowerCase()
+        .replace(" ", "_")
+        .replace(/[^a-zA-Z0-9_]/, "_");
 }
 
 /**

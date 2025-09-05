@@ -1,4 +1,4 @@
-/** 
+/**
  * Very bad logic error. Player must quit game, refresh page, and log in again.
  *
  * Client-->Server
@@ -31,14 +31,14 @@ export const MSG_PASSWORD = "pass";
  */
 export const MSG_PROMPT = "ask";
 
-/** 
+/**
  * Client sends the player's username to the server
  *
  * Player-->Client-->Server
  */
 export const MSG_USERNAME = "user";
 
-/** 
+/**
  * Player has entered a command, and wants to do something.
  *
  * Player-->Client-->Server
@@ -49,8 +49,8 @@ export const MSG_COMMAND = "c";
  * Represents a message sent from client to server.
  */
 export class ClientMessage {
-    /** 
-     * @protected 
+    /**
+     * @protected
      * @type {any[]} _arr The array that contains the message data
      */
     _arr;
@@ -65,28 +65,36 @@ export class ClientMessage {
         return this._arr[0];
     }
 
-
     /**
      * @param {string} msgData the raw text data in the websocket message.
      */
     constructor(msgData) {
         if (typeof msgData !== "string") {
-            throw new Error("Could not create client message. Attempting to parse json, but data was not even a string, it was a " + typeof msgData);
-            return
+            throw new Error(
+                "Could not create client message. Attempting to parse json, but data was not even a string, it was a " +
+                    typeof msgData,
+            );
+            return;
         }
 
         try {
             this._arr = JSON.parse(msgData);
         } catch (_) {
-            throw new Error(`Could not create client message. Attempting to parse json, but data was invalid json: >>> ${msgData} <<<`);
+            throw new Error(
+                `Could not create client message. Attempting to parse json, but data was invalid json: >>> ${msgData} <<<`,
+            );
         }
 
         if (typeof this._arr !== "array") {
-            throw new Error(`Could not create client message. Excpected an array, but got a ${typeof this._arr}`);
+            throw new Error(
+                `Could not create client message. Excpected an array, but got a ${typeof this._arr}`,
+            );
         }
 
         if (this._arr.length < 1) {
-            throw new Error("Could not create client message. Excpected an array with at least 1 element, but got an empty one");
+            throw new Error(
+                "Could not create client message. Excpected an array with at least 1 element, but got an empty one",
+            );
         }
 
         this._arr = arr;

@@ -7,25 +7,32 @@ import * as id from "../utils/id.js";
  * @class
  */
 export class Character {
-
     /** @type {string} character's name */
     name;
 
     /** @protected @type {number} The number of XP the character has. */
     _xp = 0;
-    get xp() { return this._xp; }
+    get xp() {
+        return this._xp;
+    }
 
     /** @protected @type {number} The character's level. */
     _level = 1;
-    get level() { return this._level; }
+    get level() {
+        return this._level;
+    }
 
     /** @protected @type {string} unique name used for chats when there's a name clash and also other things that require a unique character id */
     _id;
-    get id() { return this._id; }
+    get id() {
+        return this._id;
+    }
 
     /** @protected @type {string} username of the player that owns this character. */
     _username;
-    get username() { return this._username; }
+    get username() {
+        return this._username;
+    }
 
     /** @type {string} Bloodline background */
     ancestry;
@@ -57,7 +64,6 @@ export class Character {
      * @param {boolean} initialize Should we initialize the character
      */
     constructor(playerUname, name, initialize) {
-
         this.name = name;
 
         // Initialize the unique name if this character.
@@ -138,7 +144,9 @@ export class Character {
                 this.meleeCombat = Math.max(this.skulduggery, 10);
                 break;
             default:
-                throw new Error('Logic error, ancestry d8() roll was out of scope');
+                throw new Error(
+                    "Logic error, ancestry d8() roll was out of scope",
+                );
         }
 
         //
@@ -167,7 +175,7 @@ export class Character {
                 this.equipment
                     .set("sickle", 1)
                     .set("poisoner's kit", 1)
-                    .set("healer's kit", 1)
+                    .set("healer's kit", 1);
             default:
                 this.foundation = "debug";
                 this.proficiencies.add("heavy_armor");

@@ -8,9 +8,8 @@
  *  @todo Add encounters to portals
  */
 export class Portal {
-
     /**
-     * Target Location. 
+     * Target Location.
      */
     _targetLocationId;
 
@@ -23,5 +22,4 @@ export class Portal {
      * Description shown to the player when they traverse the portal.
      */
     _traversalDescription;
-
 }

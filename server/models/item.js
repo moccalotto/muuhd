@@ -7,7 +7,6 @@ import { cleanName } from "../utils/id.js";
  * generate these CharacterItems.
  */
 export class ItemTemplate {
-
     _id;
     _name;
     _description;
@@ -42,15 +41,18 @@ export class ItemTemplate {
      * @param {string=} id Item's machine-friendly name.
      */
     constructor(name, itemSlots, description, id) {
-
         if (typeof name !== "string") {
-            throw new Error("Name must be a string, but " + typeof name + " given.");
+            throw new Error(
+                "Name must be a string, but " + typeof name + " given.",
+            );
         }
         if (typeof description === "undefined") {
             description = "";
         }
         if (typeof description !== "string") {
-            throw new Error("Name must be a string, but " + typeof name + " given.");
+            throw new Error(
+                "Name must be a string, but " + typeof name + " given.",
+            );
         }
         if (!Number.isFinite(itemSlots)) {
             throw new Error("itemSlots must be a finite number!");
@@ -66,11 +68,15 @@ export class ItemTemplate {
         this._id = id;
         this._itemSlots = Number(itemSlots);
         this._description = "";
-
     }
 
     createItem() {
-        return new ChracterItem(this._id, this._name, this._description, this._itemSlots);
+        return new ChracterItem(
+            this._id,
+            this._name,
+            this._description,
+            this._itemSlots,
+        );
     }
 }
 
@@ -82,10 +88,10 @@ export class ItemTemplate {
  *
  * If a character picks up a Pickaxe in the dungeon, a new CharacterItem is spawned and injected into
  * the character's Equipment Map. If the item is dropped/destroyed/sold, the CharacterItem is removed from
- * the character's Equipment Map, and then deleted from memory. 
+ * the character's Equipment Map, and then deleted from memory.
  *
- * If a ChracterItem is traded away to another character, The other character inserts a clone of this item 
- * into their equipment map, and the item is then deleted from the previous owner's equipment list. 
+ * If a ChracterItem is traded away to another character, The other character inserts a clone of this item
+ * into their equipment map, and the item is then deleted from the previous owner's equipment list.
  * This is done so we do not have mulltiple characters with pointers to the same item - we would rather risk
  * dupes than wonky references.
  *
@@ -94,9 +100,8 @@ export class ItemTemplate {
  * Another bonus is, that the game can spawn custom items that arent even in the ItemTemplate Set.
  */
 export class CharacterItem {
-
     /** @type {string?} The unique name if the ItemTemplate this item is based on. May be null. */
-    templateItemId;  // We use the id instead of a pointer, could make garbage collection better.
+    templateItemId; // We use the id instead of a pointer, could make garbage collection better.
 
     /** @type {string} The player's name for this item. */
     name;
@@ -119,7 +124,3 @@ const i = new ItemTemplate("knife", 10000);
 
 const ci = new CharacterItem();
 console.log(ci);
-
-
-
-

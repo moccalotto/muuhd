@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs";
 import { Player } from "./models/player.js";
 import { Game } from "./models/game.js";
-import { ClientMessage, MSG_ERROR, MSG_MESSAGE, MSG_PROMPT, MSG_CALAMITY } from "./utils/messages.js";
+import { ClientMessage, MSG_ERROR, MSG_MESSAGE, MSG_PROMPT, MSG_CALAMITY, } from "./utils/messages.js";
 
 class Session {
     /** @type {boolean} */
@@ -49,8 +49,12 @@ class MudServer {
         console.log("New connection established");
         this.sessions[websocket] = new Session();
 
-        websocket.on("message", (data) => { this.onIncomingMessage(websocket, data) });
-        websocket.on("close", () => { this.onConnectionClosed(websocket); });
+        websocket.on("message", (data) => {
+            this.onIncomingMessage(websocket, data);
+        });
+        websocket.on("close", () => {
+            this.onConnectionClosed(websocket);
+        });
 
         this.send(websocket, MSG_MESSAGE, "Welcome to MUUUHD", "big");
         this.send(websocket, MSG_PROMPT, "Please enter your username");
@@ -64,10 +68,18 @@ class MudServer {
         const session = this.sessions.get(websocket);
 
         if (!session) {
-            console.error("Incoming message from a client without a session!", data);
-            this.send(websocket, MSG_ERROR, "terminal", "You do not have an active session. Go away!")
+            console.error(
+                "Incoming message from a client without a session!",
+                data,
+            );
+            this.send(
+                websocket,
+                MSG_ERROR,
+                "terminal",
+                "You do not have an active session. Go away!",
+            );
             websocket.close();
-            return
+            return;
         }
 
         let message;
@@ -76,9 +88,14 @@ class MudServer {
             message = new ClientMessage(data);
         } catch (error) {
             console.error("Bad websocket message", data, error);
-            this.send(websocket, MSG_ERROR, "terminal", "You sent me a bad message! Goodbye...")
+            this.send(
+                websocket,
+                MSG_ERROR,
+                "terminal",
+                "You sent me a bad message! Goodbye...",
+            );
             websocket.close();
-            return
+            return;
         }
 
         if (!session.usernameProcessed) {
@@ -87,8 +104,14 @@ class MudServer {
             // We haven"t gotten a username yet, so we expect one.
             //----------------------------------------------------
             if (!message.hasUsername()) {
-                console.error("User should have sent a “username” message, but sent something else instead")
-                this.send(websocket, MSG_CALAMITY, "I expected you to send me a username, but you sent me something else instead. You bad! Goodbye...")
+                console.error(
+                    "User should have sent a “username” message, but sent something else instead",
+                );
+                this.send(
+                    websocket,
+                    MSG_CALAMITY,
+                   "I expected you to send me a username, but you sent me something else instead. You bad! Goodbye...",
+                );
 
                 // for now, just close the socket.
                 websocket.close();
@@ -97,10 +120,14 @@ class MudServer {
             const player = this.game.players.get(message.username);
 
             if (!player) {
-                // player not found - for now, just close the connection - make a better 
+                // player not found - for now, just close the connection - make a better
                 console.log("Invalid username sent during login: %s", username);
                 this.send(websocket, MSG_ERROR, "Invalid username");
-                this.send(websocket, MSG_PROMPT, "Please enter a valid username");
+                this.send(
+                    websocket,
+                    MSG_PROMPT,
+                    "Please enter a valid username",
+                );
             }
 
             // correct username, tentatively assign player to session
@@ -120,10 +147,12 @@ class MudServer {
         //----------------------------------------------------
         if (!session.passwordProcessed) {
             if (!message.hasPassword) {
-                console.error("Youser should have sent a “password” message, but sent this instead: %s", message.type);
+                console.error(
+                    "Youser should have sent a “password” message, but sent this instead: %s",
+                    message.type,
+                );
             }
         }
-
 
         //
         //----------------------------------------------------
@@ -134,7 +163,10 @@ class MudServer {
             return;
         }
 
-        console.error("We have received a message we couldn't handle!!!", message);
+        console.error(
+            "We have received a message we couldn't handle!!!",
+            message,
+        );
     }
 
     /**
@@ -226,7 +258,9 @@ class MudServer {
                 break;
 
             default:
-                player.sendMessage(`Unknown command: ${command}. Type "help" for available commands.`);
+                player.sendMessage(
+                    `Unknown command: ${command}. Type "help" for available commands.`,
+                );
         }
 
         player.sendPrompt();
@@ -257,7 +291,10 @@ class MudServer {
 // Create HTTP server for serving the client
 const server = http.createServer((req, res) => {
     // let filePath = path.join(__dirname, "public", req.url === "/" ? "index.html" : req.url);
-    let filePath = path.join("public", req.url === "/" ? "index.html" : req.url);
+    let filePath = path.join(
+        "public",
+        req.url === "/" ? "index.html" : req.url,
+    );
     const ext = path.extname(filePath);
 
     const contentTypes = {
