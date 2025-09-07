@@ -5,45 +5,73 @@
  *      or
  * Server-->Client-->Plater
  */
-export const MSG_CALAMITY = "calamity";
+export const CALAMITY = "calamity";
 
-/** Tell recipient that an error has occurred */
-export const MSG_ERROR = "e";
+/** 
+ * Tell recipient that an error has occurred 
+ *
+ * Server-->Client-->Player
+ */
+export const ERROR = "e";
 
 /**
  * Message to be displayed.
  *
  * Server-->Client-->Player
  */
-export const MSG_MESSAGE = "m";
+export const MESSAGE = "m";
+
 
 /**
- * Message contains the player's password (or hash or whatever).
+ * Player has entered data, and sends it to server.
  *
  * Player-->Client-->Server
  */
-export const MSG_PASSWORD = "pass";
+export const REPLY = "reply";
 
 /**
+ * Player wants to quit.
+ *
+ * Player-->Client-->Server
+ */
+export const QUIT = "quit";
+
+/**
+ * Player wants help
+ *
+ * Player-->Client-->Server
+ */
+export const HELP = "help";
+
+/**
+ * Server tells the client to prompt the player for some data
+ *
  * Server-->Client-->Player
- *
- * Server tells the client to prompt the player for some info
  */
-export const MSG_PROMPT = "ask";
-
-/**
- * Client sends the player's username to the server
- *
- * Player-->Client-->Server
- */
-export const MSG_USERNAME = "user";
+export const PROMPT = "prompt";
 
 /**
  * Player has entered a command, and wants to do something.
  *
  * Player-->Client-->Server
  */
-export const MSG_COMMAND = "c";
+export const COMMAND = "c";
+
+/**
+ * Server tells the client to prompt the player for some data
+ *
+ * Server-->Client-->Player
+ */
+export const SYSTEM = "_";
+
+/**
+ * Debug message, to be completely ignored in production
+ *
+ * Client-->Server
+ *      or
+ * Server-->Client-->Plater
+ */
+export const DEBUG = "dbg";
 
 /**
  * Represents a message sent from client to server.
@@ -53,16 +81,16 @@ export class ClientMessage {
      * @protected
      * @type {any[]} _arr The array that contains the message data
      */
-    _arr;
+    _attr;
 
     /** The message type.
      *
-     * One of the MSG_* constants from this document.
+     * One of the * constants from this document.
      *
      * @returns {string}
      */
     get type() {
-        return this._arr[0];
+        return this._attr[0];
     }
 
     /**
@@ -70,66 +98,101 @@ export class ClientMessage {
      */
     constructor(msgData) {
         if (typeof msgData !== "string") {
-            throw new Error(
-                "Could not create client message. Attempting to parse json, but data was not even a string, it was a " +
-                    typeof msgData,
-            );
+            throw new Error("Could not create client message. Attempting to parse json, but data was not even a string, it was a " + typeof msgData);
             return;
         }
 
         try {
-            this._arr = JSON.parse(msgData);
+            this._attr = JSON.parse(msgData);
         } catch (_) {
-            throw new Error(
-                `Could not create client message. Attempting to parse json, but data was invalid json: >>> ${msgData} <<<`,
-            );
+            throw new Error(`Could not create client message. Attempting to parse json, but data was invalid json: >>> ${msgData} <<<`);
         }
 
-        if (typeof this._arr !== "array") {
-            throw new Error(
-                `Could not create client message. Excpected an array, but got a ${typeof this._arr}`,
-            );
+        if (!Array.isArray(this._attr)) {
+            throw new Error(`Could not create client message. Excpected an array, but got a ${typeof this._attr}`);
         }
 
-        if (this._arr.length < 1) {
-            throw new Error(
-                "Could not create client message. Excpected an array with at least 1 element, but got an empty one",
-            );
+        if (this._attr.length < 1) {
+            throw new Error("Could not create client message. Excpected an array with at least 1 element, but got an empty one");
         }
-
-        this._arr = arr;
     }
-
-    /** Does this message contain a message that should be displayed to the user the "normal" way? */
-    isMessage() {
-        return this._arr[0] === "m";
+    hasCommand() {
+        return this._attr.length > 1 && this._attr[0] === COMMAND;
     }
 
     /** Does this message contain a username-response from the client? */
-    hasUsername() {
-        return this._arr[0] === MSG_USERNAME;
+    isUsernameResponse() {
+        return this._attr.length === 3
+            && this._attr[0] === REPLY
+            && this._attr[1] === "username"
+            && typeof this._attr[2] === "string";
     }
 
     /** Does this message contain a password-response from the client? */
-    hasPassword() {
-        return this._arr[0] === MSG_PASSWORD;
+    isPasswordResponse() {
+        return this._attr.length === 3 
+            && this._attr[0] === REPLY 
+            && this._attr[1] === "password"
+            && typeof this._attr[2] === "string";
+    }
+
+    /** @returns {boolean} does this message indicate the player wants to quit */
+    isQuitCommand() {
+        return this._attr[0] === QUIT
+    }
+
+    isHelpCommand() {
+        return this._attr[0] === HELP
+    }
+
+    /** @returns {boolean} is this a debug message? */
+    isDebug() {
+        return this._attr.length == 2 && this._attr[0] === DEBUG;
+    }
+
+    isIntegerResponse() {
+        return this._attr.length === 3
+            && this._attr[0] === REPLY
+            && this._attr[1] === "integer"
+            && (typeof this._attr[2] === "string" || typeof this._attr[2] === "number")
+            && Number.isInteger(Number(this._attr[2]));
+    }
+
+    /** @returns {number} integer */
+    get integer() {
+        if (!this.isIntegerResponse()) {
+            return undefined;
+        }
+
+        return Number.parseInt(this._attr[2]);
+    }
+
+    get debugInfo() {
+        return this.isDebug() ? this._attr[1] : undefined;
     }
 
     /** @returns {string|false} Get the username stored in this message */
     get username() {
-        return this.hasUsername() ? this._arr[1] : false;
+        return this.isUsernameResponse() ? this._attr[2] : false;
     }
 
     /** @returns {string|false} Get the password stored in this message */
     get password() {
-        return this.hasPassword() ? this._arr[1] : false;
+        return this.isPasswordResponse() ? this._attr[2] : false;
     }
 
+    /** @returns {string} */
     get command() {
-        return this.isCommand() ? this._attr[1] : false;
+        return this.hasCommand() ? this._attr[1] : false;
     }
+}
 
-    isCommand() {
-        return this._raw[0] === MSG_COMMAND;
-    }
+/**
+ * Given a message type and some args, create a string that can be sent from the server to the client (or vise versa)
+ *
+ * @param {string} messageType
+ * @param {...any} args
+ */
+export function prepare(messageType, ...args) {
+    return JSON.stringify([messageType, ...args]);
 }

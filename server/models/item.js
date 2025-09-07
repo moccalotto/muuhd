@@ -42,17 +42,13 @@ export class ItemTemplate {
      */
     constructor(name, itemSlots, description, id) {
         if (typeof name !== "string") {
-            throw new Error(
-                "Name must be a string, but " + typeof name + " given.",
-            );
+            throw new Error("Name must be a string, but " + typeof name + " given.");
         }
         if (typeof description === "undefined") {
             description = "";
         }
         if (typeof description !== "string") {
-            throw new Error(
-                "Name must be a string, but " + typeof name + " given.",
-            );
+            throw new Error("Name must be a string, but " + typeof name + " given.");
         }
         if (!Number.isFinite(itemSlots)) {
             throw new Error("itemSlots must be a finite number!");
@@ -71,12 +67,7 @@ export class ItemTemplate {
     }
 
     createItem() {
-        return new ChracterItem(
-            this._id,
-            this._name,
-            this._description,
-            this._itemSlots,
-        );
+        return new ChracterItem(this._id, this._name, this._description, this._itemSlots);
     }
 }
 
@@ -119,8 +110,3 @@ export class CharacterItem {
         this.itemSlots = itemSlots;
     }
 }
-
-const i = new ItemTemplate("knife", 10000);
-
-const ci = new CharacterItem();
-console.log(ci);

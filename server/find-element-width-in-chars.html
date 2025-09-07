@@ -1,0 +1,50 @@
+<!-- CHATGPT EXAMPLE -->
+<!-- 1. Get the width of the container (in pixels). -->
+<!-- 2. Get the width of a single character in the monospaced font (this can be done by creating a temporary element with the same font and measuring its width).-->
+<!-- 3. Divide the container's width by the character's width to get the number of characters. -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Measure Div Width in Characters</title>
+  <style>
+    .monospaced-div {
+      font-family: "Courier New", Courier, monospace; /* Monospaced font */
+      width: 360px; /* Example width in pixels */
+      border: 1px solid #333;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="monospaced-div">
+    This is a div with monospaced text.
+  </div>
+
+  <script>
+    function getMonospacedCharCount(div) {
+      // Create a temporary span to get the width of one character
+      const testChar = document.createElement('span');
+      testChar.textContent = '0'; // Monospaced fonts use "0" for width
+      testChar.style.fontFamily = window.getComputedStyle(div).fontFamily;
+      testChar.style.visibility = 'hidden'; // Hide the element
+      document.body.appendChild(testChar);
+
+      const charWidth = testChar.offsetWidth; // Get width of a single character
+      document.body.removeChild(testChar); // Remove the test element
+
+      // Get the width of the div and calculate how many characters fit
+      const divWidth = div.offsetWidth;
+
+      // Return the number of characters that fit in the div width
+      return Math.floor(divWidth / charWidth);
+    }
+
+    const div = document.querySelector('.monospaced-div');
+    const charCount = getMonospacedCharCount(div);
+    console.log('Number of characters the div can hold:', charCount);
+  </script>
+</body>
+</html>

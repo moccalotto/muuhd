@@ -10,7 +10,10 @@ export class Character {
     /** @type {string} character's name */
     name;
 
-    /** @protected @type {number} The number of XP the character has. */
+    /**
+     * @protected
+     * @type {number} The number of XP the character has.
+     */
     _xp = 0;
     get xp() {
         return this._xp;
@@ -61,15 +64,15 @@ export class Character {
     /**
      * @param {string} username The name of player who owns this character. Note that the game can own a character - somehow.
      * @param {string} name The name of the character
-     * @param {boolean} initialize Should we initialize the character
+     * @param {boolean=false} initialize Should we initialize the character
      */
-    constructor(playerUname, name, initialize) {
+    constructor(username, name, initialize) {
         this.name = name;
 
         // Initialize the unique name if this character.
         //
         // things to to hell if two characters with the same name are created at exactly the same time with the same random seed.
-        this._id = id.fromName(playerUname, name);
+        this._id = id.fromName(username, name);
 
         // should we skip initialization of this object
         if (initialize !== true) {
@@ -144,9 +147,7 @@ export class Character {
                 this.meleeCombat = Math.max(this.skulduggery, 10);
                 break;
             default:
-                throw new Error(
-                    "Logic error, ancestry d8() roll was out of scope",
-                );
+                throw new Error("Logic error, ancestry d8() roll was out of scope");
         }
 
         //
@@ -172,11 +173,8 @@ export class Character {
             case 2:
                 this.foundation = "druid";
                 this.proficiencies.add("armor/natural");
-                this.equipment
-                    .set("sickle", 1)
-                    .set("poisoner's kit", 1)
-                    .set("healer's kit", 1);
-            default:
+                this.equipment.set("sickle", 1).set("poisoner's kit", 1).set("healer's kit", 1);
+            default: // case 2:
                 this.foundation = "debug";
                 this.proficiencies.add("heavy_armor");
                 this.proficiencies.add("heavy_weapons");
@@ -193,7 +191,3 @@ export class Character {
         }
     }
 }
-
-const c = new Character("username", "test", true);
-
-console.log(c);

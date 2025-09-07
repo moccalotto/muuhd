@@ -1,21 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap');
+
 body {
-    font-family: "Courier New", monospace;
+    font-family: "Fira Code", monospace;
+    font-optical-sizing: auto;
+    font-size: 14px;
     background-color: #1a1a1a;
     color: #00ff00;
     margin: 0;
     padding: 0;
     height: 100vh;
+    width: 100vw;
+
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 #container {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    max-width: 1200px;
+    max-width: 99.9vw;
     margin: 0 auto;
     padding: 10px;
+    overflow: hidden;
 }
 
 #output {
@@ -25,9 +33,12 @@ body {
     padding: 15px;
     overflow-y: auto;
     white-space: pre-wrap;
-    font-size: 14px;
     line-height: 1.4;
-    margin-bottom: 10px;
+    margin-bottom: 20px;
+    font-family: "Fira Code", monospace;
+    font-optical-sizing: auto;
+    font-size: 14px;
+    width: 100ch;
 }
 
 #input-container {
@@ -41,7 +52,8 @@ body {
     border: 2px solid #333;
     color: #00ff00;
     padding: 10px;
-    font-family: "Courier New", monospace;
+    font-family: "Fira Code", monospace;
+    font-optical-sizing: auto;
     font-size: 14px;
 }
 
@@ -55,7 +67,8 @@ body {
     border: 2px solid #555;
     color: #00ff00;
     padding: 10px 20px;
-    font-family: "Courier New", monospace;
+    font-family: "Fira Code", monospace;
+    font-optical-sizing: auto;
     cursor: pointer;
 }
 
@@ -86,10 +99,38 @@ body {
     color: #ff4444;
 }
 
-.system {
-    color: #aaaaaa;
+.input {
+    color: #666;
+}
+
+.debug {
+    opacity: 0.33;
 }
 
 .prompt {
     color: #00ccff;
+}
+
+.bold {
+    font-weight: bold;
+}
+
+.italic {
+    font-style: italic;
+}
+
+.strike {
+    text-decoration:line-through;
+}
+
+.underline {
+    text-decoration: underline;
+}
+
+.undercurl {
+    text-decoration: wavy underline lime;
+}
+
+.faint {
+    opacity: 0.42;
 }

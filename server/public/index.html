@@ -4,201 +4,20 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>WebSocket MUD</title>
-        <link rel="stylesheet" href="style.css">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="style.css" />
     </head>
     <body>
         <div id="container">
             <div id="status" class="connecting">Connecting...</div>
             <div id="output"></div>
             <div id="input-container">
-                <input
-                    type="text"
-                    id="input"
-                    placeholder="Enter command..."
-                    disabled
-                />
+                <input type="text" autocomplete="off" id="input" placeholder="Enter command..." disabled />
                 <button id="send" disabled>Send</button>
             </div>
         </div>
 
-        <script>
-            class MUDClient {
-                constructor() {
-                    this.ws = null;
-                    this.output = document.getElementById("output");
-                    this.input = document.getElementById("input");
-                    this.sendButton = document.getElementById("send");
-                    this.status = document.getElementById("status");
-
-                    this.setupEventListeners();
-                    this.connect();
-                }
-
-                connect() {
-                    const protocol =
-                        window.location.protocol === "https:" ? "wss:" : "ws:";
-                    const wsUrl = `${protocol}//${window.location.host}`;
-
-                    this.updateStatus("Connecting...", "connecting");
-
-                    try {
-                        this.ws = new WebSocket(wsUrl);
-
-                        this.ws.onopen = () => {
-                            this.updateStatus("Connected", "connected");
-                            this.input.disabled = false;
-                            this.sendButton.disabled = false;
-                            this.input.focus();
-                        };
-
-                        this.ws.onmessage = (event) => {
-                            console.log(event);
-                            const data = JSON.parse(event.data);
-                            this.handleMessage(data);
-                        };
-
-                        this.ws.onclose = () => {
-                            this.updateStatus("Disconnected", "disconnected");
-                            this.input.disabled = true;
-                            this.sendButton.disabled = true;
-
-                            // Attempt to reconnect after 3 seconds
-                            setTimeout(() => this.connect(), 3000);
-                        };
-
-                        this.ws.onerror = (error) => {
-                            this.updateStatus("Connection Error", "error");
-                            this.appendOutput(
-                                "Connection error occurred. Retrying...",
-                                "error",
-                            );
-                        };
-                    } catch (error) {
-                        console.error(error);
-                        this.updateStatus("Connection Failed", "error");
-                        setTimeout(() => this.connect(), 3000);
-                    }
-                }
-
-                setupEventListeners() {
-                    this.input.addEventListener("keypress", (e) => {
-                        if (e.key === "Enter") {
-                            this.sendMessage();
-                        }
-                    });
-
-                    this.sendButton.addEventListener("click", () => {
-                        this.sendMessage();
-                    });
-
-                    // Command history
-                    this.commandHistory = [];
-                    this.historyIndex = -1;
-
-                    this.input.addEventListener("keydown", (e) => {
-                        if (e.key === "ArrowUp") {
-                            e.preventDefault();
-                            if (
-                                this.historyIndex <
-                                this.commandHistory.length - 1
-                            ) {
-                                this.historyIndex++;
-                                this.input.value =
-                                    this.commandHistory[
-                                        this.commandHistory.length -
-                                            1 -
-                                            this.historyIndex
-                                    ];
-                            }
-                        } else if (e.key === "ArrowDown") {
-                            e.preventDefault();
-                            if (this.historyIndex > 0) {
-                                this.historyIndex--;
-                                this.input.value =
-                                    this.commandHistory[
-                                        this.commandHistory.length -
-                                            1 -
-                                            this.historyIndex
-                                    ];
-                            } else if (this.historyIndex === 0) {
-                                this.historyIndex = -1;
-                                this.input.value = "";
-                            }
-                        }
-                    });
-                }
-
-                sendMessage() {
-                    const message = this.input.value.trim();
-                    if (
-                        message &&
-                        this.ws &&
-                        this.ws.readyState === WebSocket.OPEN
-                    ) {
-                        // Add to command history
-                        if (
-                            this.commandHistory[
-                                this.commandHistory.length - 1
-                            ] !== message
-                        ) {
-                            this.commandHistory.push(message);
-                            if (this.commandHistory.length > 50) {
-                                this.commandHistory.shift();
-                            }
-                        }
-                        this.historyIndex = -1;
-
-                        this.ws.send(
-                            JSON.stringify({
-                                type: "command",
-                                content: message,
-                            }),
-                        );
-
-                        this.input.value = "";
-                    }
-                }
-
-                handleMessage(data) {
-                    console.log(data);
-                    switch (data[0]) {
-                        case "error":
-                            this.appendOutput(data[1], "error");
-                            break;
-                        case "system":
-                            this.appendOutput(data[1], "system");
-                            break;
-                        default:
-                            this.appendOutput(data[1]);
-                    }
-                }
-
-                appendOutput(text, className = "") {
-                    const div = document.createElement("div");
-                    if (className) {
-                        div.className = className;
-                    }
-
-                    // Check if this looks like a prompt
-                    if (text.includes("] > ")) {
-                        div.className = "prompt";
-                    }
-
-                    div.textContent = text;
-                    this.output.appendChild(div);
-                    this.output.scrollTop = this.output.scrollHeight;
-                }
-
-                updateStatus(message, className) {
-                    this.status.textContent = `Status: ${message}`;
-                    this.status.className = className;
-                }
-            }
-
-            // Initialize the MUD client when the page loads
-            document.addEventListener("DOMContentLoaded", () => {
-                new MUDClient();
-            });
-        </script>
+        <script src="client.js"></script>
     </body>
 </html>

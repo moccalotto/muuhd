@@ -10,8 +10,10 @@
 import WebSocket from "ws";
 import { Character } from "./character.js";
 import { ItemTemplate } from "./item.js";
+import { Player } from "./player.js";
 
 export class Game {
+
     /** @type {Map<string,ItemTemplate>} List of all item templates in the game */
     _itemTemplates = new Map();
 
