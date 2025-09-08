@@ -7,7 +7,7 @@ import * as msg from "./utils/messages.js";
 import * as cfg from "./utils/config.js";
 import { Session } from "./models/session.js";
 import { Seeder } from "./seed.js";
-import { AuthState } from "./models/states/auth.js";
+import { AuthState } from "./models/states/AuthState.js";
 
 class MudServer {
 

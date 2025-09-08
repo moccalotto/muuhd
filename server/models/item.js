@@ -69,6 +69,13 @@ export class ItemTemplate {
     createItem() {
         return new ChracterItem(this._id, this._name, this._description, this._itemSlots);
     }
+
+    static getOrCreate(id, name, description, itemSlots) {
+    }
+
+    static seed() {
+        this
+    }
 }
 
 /**

@@ -173,8 +173,14 @@ export class Character {
             case 2:
                 this.foundation = "druid";
                 this.proficiencies.add("armor/natural");
-                this.equipment.set("sickle", 1).set("poisoner's kit", 1).set("healer's kit", 1);
-            default: // case 2:
+                this.equipment
+                    .set("sickle", 1)
+                    .set("poisoner's kit", 1)  // can apply to weapon, food, drink. Can recharge in the forest
+                    .set("healer's kit", 1);   // provide fast out-of-combat healing. Can recharge in forest.
+                this.silver = 10;
+                this.maxHitPoints = this.currentHitPoints = 10;
+                this.itemSlots = 5;
+            default: 
                 this.foundation = "debug";
                 this.proficiencies.add("heavy_armor");
                 this.proficiencies.add("heavy_weapons");

@@ -30,7 +30,7 @@ export class Seeder {
         //
         const passwordHash = "1000:bdaa0d7436caeaa4d278e7591870b68c:151b8f7e73a97a01af190a51b45ee389c2f4590a6449ddae6f25b9eab49cac0d";
         const player = new Player("user", passwordHash);
-        this.game.players.set("user", player);
+        this.game.createPlayer("user", passwordHash);
 
         // const char = new Character(player.username, "Sir Debug The Strong", true);
     }

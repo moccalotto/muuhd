@@ -19,9 +19,6 @@ export class Session {
         return this._game;
     }
 
-    /** @type Date */
-    latestPing;
-
     /** @type {Player} */
     player;
 

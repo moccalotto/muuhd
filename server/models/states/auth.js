@@ -1,8 +1,8 @@
-import { Session } from "../session.js";
 import * as msg from "../../utils/messages.js";
 import * as security from "../../utils/security.js";
-import { JustLoggedInState } from "./justLoggedIn.js";
 import { CreatePlayerState } from "./createPlayer.js";
+import { JustLoggedInState } from "./justLoggedIn.js";
+import { Session } from "../session.js";
 
 const STATE_EXPECT_USERNAME = "promptUsername";
 const STATE_EXPECT_PASSWORD = "promptPassword";
@@ -43,7 +43,7 @@ export class AuthState {
         }
 
         if (this.subState === STATE_EXPECT_PASSWORD) {
-            this.receivePassword(message)
+            this.receivePassword(message);
             return;
         }
 
@@ -81,11 +81,7 @@ export class AuthState {
             return;
         }
 
-        if (this.session.game.players.size === 0) {
-            console.error("there are no players registered");
-        }
-
-        const player = this.session.game.players.get(message.username);
+        const player = this.session.game.getPlayer(message.username);
 
         //
         // handle invalid username
@@ -142,8 +138,12 @@ export class AuthState {
         if (!security.verifyPassword(message.password, this.session.player.passwordHash)) {
             this.session.sendError("Incorrect password!");
             this.session.sendPrompt("password", PASSWORD_PROMPT);
+            this.session.player.failedPasswordsSinceLastLogin++;
             return;
         }
+
+        this.session.player.lastSucessfulLoginAt = new Date();
+        this.session.player.failedPasswordsSinceLastLogin = 0;
 
         //
         // Password correct, check if player is an admin

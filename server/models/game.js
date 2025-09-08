@@ -30,12 +30,41 @@ export class Game {
 
     /**
      * All players ever registered, mapped by name => player.
+     * 
+     *  _____ _
+     * |  ___(_)_  ___ __ ___   ___
+     * | |_  | \ \/ / '_ ` _ \ / _ \
+     * |  _| | |>  <| | | | | |  __/
+     * |_|   |_/_/\_\_| |_| |_|\___|
+     *
+     * 1. Add mutex on the players table to avoid race conditions during
+     *    insert/delete/check_available_username
+     *   1.a ) add an "atomicInsert" that inserts a new player if the giver username
+     *         is available.
+     * 2. Prune "dead" players (players with 0 logins) after a short while
+     * 
      *
      * @protected
      * @type {Map<string,Player>} Map of users in the game username->Player
      */
     _players = new Map();
-    get players() {
-        return this._players;
+
+    hasPlayer(username) {
+        return this._players.has(username);
+    }
+
+    getPlayer(username) {
+        return this._players.get(username);
+    }
+
+    createPlayer(username, passwordHash=null) {
+        if (this._players.has(username)) {
+            return false;
+        }
+
+        const player = new Player(username, passwordHash);
+        this._players.set(username, player);
+
+        return player;
     }
 }

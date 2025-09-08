@@ -1,7 +1,5 @@
 import figlet from "figlet";
 import { Session } from "../session.js";
-import WebSocket from "ws";
-import { AuthState } from "./auth.js";
 import { ClientMessage } from "../../utils/messages.js";
 import { PARTY_MAX_SIZE } from "../../config.js";
 import { frameText } from "../../utils/tui.js";

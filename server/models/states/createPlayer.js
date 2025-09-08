@@ -1,4 +1,3 @@
-import WebSocket from "ws";
 import { Session } from "../session.js";
 import * as msg from "../../utils/messages.js";
 import * as security from "../../utils/security.js";
@@ -79,11 +78,11 @@ export class CreatePlayerState {
             return;
         }
 
-        const taken = this.session.game.players.has(message.username);
+        const player = this.session.game.createPlayer(message.username);
 
         //
         // handle taken/occupied username
-        if (taken) {
+        if (player === false) {
             // Telling the user right away that the username is taken can
             // lead to data leeching. But fukkit.
 
@@ -92,18 +91,9 @@ export class CreatePlayerState {
             return;
         }
 
-        this._player = new Player(message.username, undefined);
+        this._player = player;
 
-        //  _____ _
-        // |  ___(_)_  ___ __ ___   ___
-        // | |_  | \ \/ / '_ ` _ \ / _ \
-        // |  _| | |>  <| | | | | |  __/
-        // |_|   |_/_/\_\_| |_| |_|\___|
-        //
-        // 1. Add mutex on the players table to avoid race conditions
-        // 2. Prune "dead" players (players with 0 logins) after a short while
-        this.session.game.players.set(message.username, this._player);
-        this.session.sendMessage("Username available");
+        this.session.sendMessage("Username available 👌");
         this.session.sendMessage(`Username _*${message.username}*_ is available, and I've reserved it for you :)`);
         this.session.sendPrompt("password", PASSWORD_PROMPT);
         this.setMessageHandler(this.receivePassword);
