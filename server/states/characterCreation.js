@@ -1,8 +1,8 @@
 import figlet from "figlet";
-import { Session } from "../session.js";
-import { ClientMessage } from "../../utils/messages.js";
-import { PARTY_MAX_SIZE } from "../../config.js";
-import { frameText } from "../../utils/tui.js";
+import { Session } from "../models/session.js";
+import { ClientMessage } from "../utils/messages.js";
+import { frameText } from "../utils/tui.js";
+import { Config } from "../config.js";
 
 export class CharacterCreationState {
 
@@ -28,35 +28,40 @@ export class CharacterCreationState {
     onAttach() {
         const charCount = this.session.player.characters.size;
 
+        //NOTE: could use async to optimize performance
         const createPartyLogo = frameText(
             figlet.textSync("Create Your Party"),
-            { hPadding: 2, vPadding: 1, hMargin: 2, vMargin: 1 },
+            { vPadding: 0, frameChars: "§=§§§§§§" },
         );
 
-        this.session.sendMessage(createPartyLogo, {preformatted:true});
+        this.session.sendMessage(createPartyLogo, { preformatted: true });
 
         this.session.sendMessage([
             "",
             `Current party size: ${charCount}`,
-            `Max party size:     ${PARTY_MAX_SIZE}`,
+            `Max party size:     ${Config.maxPartySize}`,
         ]);
 
         const min = 1;
-        const max = PARTY_MAX_SIZE - charCount;
-        const prompt = `Please enter an integer between ${min} - ${max} (or type :help to get more info about party size)`;
+        const max = Config.maxPartySize - charCount;
+        const prompt = [
+            `Please enter an integer between ${min} - ${max}`,
+            "((type *:help* to get more info about party size))",
+        ];
 
         this.session.sendMessage(`You can create a party with ${min} - ${max} characters, how big should your party be?`);
+
         this.session.sendPrompt("integer", prompt);
 
         /** @param {ClientMessage} message */
         this._dynamicMessageHandler = (message) => {
-            const n = PARTY_MAX_SIZE;
             if (message.isHelpCommand()) {
+                const mps = Config.maxPartySize; // short var name for easy doctype writing.
                 this.session.sendMessage([
-                    `Your party can consist of 1 to ${n} characters.`,
+                    `Your party can consist of 1 to ${mps} characters.`,
                     "",
                     "* Large parties tend live longer",
-                    `* If you have fewer than ${n} characters, you can`,
+                    `* If you have fewer than ${mps} characters, you can`,
                     "  hire extra characters in your local inn.",
                     "* large parties level slower because there are more",
                     "  characters to share the Experience Points",
@@ -67,6 +72,7 @@ export class CharacterCreationState {
                 ]);
                 return;
             }
+
             if (!message.isIntegerResponse()) {
                 this.session.sendError("You didn't enter a number");
                 this.session.sendPrompt("integer", prompt);

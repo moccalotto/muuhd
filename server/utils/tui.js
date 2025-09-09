@@ -182,7 +182,7 @@ export function frameText(text, options) {
         + options.hMargin * 2;
 
     // get the frame characters from the frameType.
-    const [
+    let [
         fNorth,             // horizontal frame top lines
         fSouth,             // horizontal frame bottom lines
         fWest,              // vertical frame lines on the left side
@@ -192,6 +192,14 @@ export function frameText(text, options) {
         fSouthWest,         // lower left frame corner
         fSouthEast,         // lower right frame corner
     ] = options.frameChars.split("");
+    if (fNorth === "§") { fNorth  = ""; }
+    if (fSouth === "§") { fSouth  = ""; }
+    if (fEast === "§") { fEast  = ""; }
+    if (fWest === "§") { fWest  = ""; }
+    if (fNorthEast === "§") { fNorthEast  = ""; }
+    if (fSouthEast === "§") { fSouthEast  = ""; }
+    if (fNorthWest === "§") { fNorthWest  = ""; }
+    if (fSouthWest === "§") { fSouthWest  = ""; }
 
     let output = "";
 

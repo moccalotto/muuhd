@@ -1,10 +1,12 @@
 import { randomBytes, pbkdf2Sync } from "node:crypto";
-import { DEV } from "./config.js";
+import { Config } from "../config.js";
+
 
 // Settings (tune as needed)
 const ITERATIONS = 1000;
 const KEYLEN = 32; // 32-bit hash
 const DIGEST = "sha256";
+const DEV = process.env.NODE_ENV === "dev";
 
 /**
  * Generate a hash from a plaintext password.
@@ -28,14 +30,14 @@ export function verifyPassword(password_candidate, stored_password_hash) {
     const [iterations, salt, hash] = stored_password_hash.split(":");
     const derived = pbkdf2Sync(password_candidate, salt, Number(iterations), KEYLEN, DIGEST).toString("hex");
     const success = hash === derived;
-    if (DEV) {
+    if (Config.dev || true) {
         console.debug(
             "Verifying password:\n" +
-            "     Input    : %s\n" +
-            "     Stored   : %s\n" +
-            "     Given    : %s\n" +
-            "     Derived  : %s\n" +
-            "     Success  : %s",
+            "     Input    : %s (the password as it was sent to us by the client)\n" +
+            "     Given    : %s (the input password hashed by us (not necessary for validation))\n" +
+            "     Stored   : %s (the password hash we have on file for the player)\n" +
+            "     Derived  : %s (the hashed version of the input password)\n" +
+            "     Verified : %s (was the password valid)",
             password_candidate,
             generateHash(password_candidate),
             stored_password_hash,

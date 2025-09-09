@@ -7,14 +7,19 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
-            "skipFiles": [
-                "<node_internals>/**"
+            "name": "Launch with Nodemon",
+            "runtimeExecutable": "nodemon",
+            "runtimeArgs": [
+                "--inspect=9229",
+                "server.js"
             ],
             "env": {
                 "NODE_ENV": "dev",
             },
-            "program": "${workspaceFolder}/server.js"
+            "restart": true,
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
         }
     ]
 }

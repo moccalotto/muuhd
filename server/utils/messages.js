@@ -122,7 +122,7 @@ export class ClientMessage {
 
     /** Does this message contain a username-response from the client? */
     isUsernameResponse() {
-        return this._attr.length === 3
+        return this._attr.length === 4
             && this._attr[0] === REPLY
             && this._attr[1] === "username"
             && typeof this._attr[2] === "string";
@@ -130,7 +130,7 @@ export class ClientMessage {
 
     /** Does this message contain a password-response from the client? */
     isPasswordResponse() {
-        return this._attr.length === 3 
+        return this._attr.length === 4 
             && this._attr[0] === REPLY 
             && this._attr[1] === "password"
             && typeof this._attr[2] === "string";
@@ -147,11 +147,11 @@ export class ClientMessage {
 
     /** @returns {boolean} is this a debug message? */
     isDebug() {
-        return this._attr.length == 2 && this._attr[0] === DEBUG;
+        return this._attr.length === 2 && this._attr[0] === DEBUG;
     }
 
     isIntegerResponse() {
-        return this._attr.length === 3
+        return this._attr.length === 4
             && this._attr[0] === REPLY
             && this._attr[1] === "integer"
             && (typeof this._attr[2] === "string" || typeof this._attr[2] === "number")
@@ -165,10 +165,6 @@ export class ClientMessage {
         }
 
         return Number.parseInt(this._attr[2]);
-    }
-
-    get debugInfo() {
-        return this.isDebug() ? this._attr[1] : undefined;
     }
 
     /** @returns {string|false} Get the username stored in this message */

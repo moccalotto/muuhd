@@ -4,19 +4,16 @@ import path from "path";
 import fs from "fs";
 import { Game } from "./models/game.js";
 import * as msg from "./utils/messages.js";
-import * as cfg from "./utils/config.js";
 import { Session } from "./models/session.js";
-import { Seeder } from "./seed.js";
-import { AuthState } from "./models/states/AuthState.js";
+import { AuthState } from "./states/Auth.js";
+import { GameSeeder } from "./seeders/gameSeeder.js";
+import { Config } from "./config.js";
 
 class MudServer {
 
     constructor() {
         /** @type {Game} */
-        this.game = new Game();
-        if (cfg.DEV) {
-            (new Seeder()).seed(this.game);
-        }
+        this.game = (new GameSeeder()).createGame();
     }
 
     //   ____ ___  _   _ _   _ _____ ____ _____ _____ ____
@@ -165,9 +162,9 @@ class MudServer {
             this.onConnectionEstabished(ws);
         });
 
-        console.info(`running in ${cfg.ENV} mode`);
-        httpServer.listen(cfg.PORT, () => {
-            console.log(`NUUHD server running on port ${cfg.PORT}`);
+        console.info(`running environment: ${Config.env}`);
+        httpServer.listen(Config.port, () => {
+            console.log(`NUUHD server running on port ${Config.port}`);
             console.log(`WebSocket server ready for connections`);
         });
     }
@@ -181,4 +178,5 @@ class MudServer {
 //---------------------------
 // Code entry point
 //-----------------
-(new MudServer()).start();
+const mudserver = new MudServer();
+mudserver.start();

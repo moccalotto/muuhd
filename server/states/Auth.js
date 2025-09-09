@@ -1,14 +1,14 @@
-import * as msg from "../../utils/messages.js";
-import * as security from "../../utils/security.js";
+import * as msg from "../utils/messages.js";
+import * as security from "../utils/security.js";
 import { CreatePlayerState } from "./createPlayer.js";
 import { JustLoggedInState } from "./justLoggedIn.js";
-import { Session } from "../session.js";
+import { Session } from "../models/session.js";
+import { Config } from "../config.js";
 
 const STATE_EXPECT_USERNAME = "promptUsername";
 const STATE_EXPECT_PASSWORD = "promptPassword";
 const USERNAME_PROMPT = [
-    "Please enter your username",
-    "((type *:help* for help))",
+    "Please enter your _username_:",
     "((type *:create* if you want to create a new user))",
 ];
 const PASSWORD_PROMPT = "Please enter your password";
@@ -57,6 +57,7 @@ export class AuthState {
         //
         // handle invalid message types
         if (!message.isUsernameResponse()) {
+            console.debug("what?!", message);
             this.session.sendError("Incorrect message type!");
             this.session.sendPrompt("username", USERNAME_PROMPT);
             return;
@@ -68,7 +69,7 @@ export class AuthState {
             // TODO:
             // Set gamestate = CreateNewPlayer
             //
-            // Also check if player creation is allowed in cfg/env
+            // Also check if player creation is allowed in config/env
             this.session.setState(new CreatePlayerState(this.session));
             return;
         }
@@ -81,11 +82,11 @@ export class AuthState {
             return;
         }
 
-        const player = this.session.game.getPlayer(message.username);
+        this.player = this.session.game.getPlayer(message.username);
 
         //
         // handle invalid username
-        if (!player) {
+        if (!this.player) {
 
             //
             // This is a security risk. In the perfect world we would allow the player to enter both
@@ -104,8 +105,8 @@ export class AuthState {
 
         //
         // username was correct, proceed to next step
-        this.session.player = player;
         this.subState = STATE_EXPECT_PASSWORD;
+        this.session.sendSystemMessage("salt", this.player.salt);
         this.session.sendPrompt("password", PASSWORD_PROMPT);
     }
 
@@ -133,21 +134,46 @@ export class AuthState {
             return;
         }
 
+
         //
-        // Verify the password against the hash we've stored.
-        if (!security.verifyPassword(message.password, this.session.player.passwordHash)) {
-            this.session.sendError("Incorrect password!");
-            this.session.sendPrompt("password", PASSWORD_PROMPT);
-            this.session.player.failedPasswordsSinceLastLogin++;
+        // Block users who enter bad passwords too many times.
+        if (this.player.failedPasswordsSinceLastLogin > Config.maxFailedLogins) {
+            this.blockedUntil = new Date() + Config.maxFailedLogins,
+            this.session.sendCalamity("You have been locked out for too many failed password attempts, come back later");
+            this.session.close();
             return;
         }
 
-        this.session.player.lastSucessfulLoginAt = new Date();
-        this.session.player.failedPasswordsSinceLastLogin = 0;
+        //
+        // Handle blocked users.
+        // They don't even get to have their password verified.
+        if (this.player.blockedUntil > (new Date())) {
+            this.session.sendCalamity("You have been locked out for too many failed password attempts, come back later");
+            this.session.close();
+            return;
+        }
 
         //
+        // Verify the password against the hash we've stored.
+        if (!security.verifyPassword(message.password, this.player.passwordHash)) {
+            this.session.sendError("Incorrect password!");
+            this.session.sendPrompt("password", PASSWORD_PROMPT);
+            this.player.failedPasswordsSinceLastLogin++;
+
+            this.session.sendDebug(`Failed login attempt #${this.player.failedPasswordsSinceLastLogin}`);
+
+            return;
+        }
+
+
+
+        this.player.lastSucessfulLoginAt = new Date();
+        this.player.failedPasswordsSinceLastLogin = 0;
+
+        this.session.player = this.player;
+        //
         // Password correct, check if player is an admin
-        if (this.session.player.isAdmin) {
+        if (this.player.isAdmin) {
             // set state AdminJustLoggedIn
         }
 

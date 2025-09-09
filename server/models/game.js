@@ -7,7 +7,7 @@
  * Serializing this object effectively saves the game.
  */
 
-import WebSocket from "ws";
+import { miniUid } from "../utils/id.js";
 import { Character } from "./character.js";
 import { ItemTemplate } from "./item.js";
 import { Player } from "./player.js";
@@ -28,43 +28,74 @@ export class Game {
      */
     _characters = new Map();
 
-    /**
-     * All players ever registered, mapped by name => player.
-     * 
-     *  _____ _
-     * |  ___(_)_  ___ __ ___   ___
-     * | |_  | \ \/ / '_ ` _ \ / _ \
-     * |  _| | |>  <| | | | | |  __/
-     * |_|   |_/_/\_\_| |_| |_|\___|
-     *
-     * 1. Add mutex on the players table to avoid race conditions during
-     *    insert/delete/check_available_username
-     *   1.a ) add an "atomicInsert" that inserts a new player if the giver username
-     *         is available.
-     * 2. Prune "dead" players (players with 0 logins) after a short while
-     * 
-     *
+    /*
      * @protected
      * @type {Map<string,Player>} Map of users in the game username->Player
      */
     _players = new Map();
 
-    hasPlayer(username) {
-        return this._players.has(username);
-    }
-
     getPlayer(username) {
         return this._players.get(username);
     }
 
-    createPlayer(username, passwordHash=null) {
+    /**
+     * Atomic player creation.
+     * 
+     * @param {string} username 
+     * @param {string?} passwordHash 
+     * @param {string?} salt 
+     *
+     * @returns {Player|null} Returns the player if username wasn't already taken, or null otherwise.
+     */
+    createPlayer(username, passwordHash = undefined, salt = undefined) {
         if (this._players.has(username)) {
             return false;
         }
 
-        const player = new Player(username, passwordHash);
+        const player = new Player(
+            username,
+            typeof passwordHash === "string" ? passwordHash : "",
+            typeof salt === "string" && salt.length > 0 ? salt : miniUid()
+        );
+
         this._players.set(username, player);
 
         return player;
+    }
+
+    /**
+    * Create an ItemTemplate with a given ID
+    *
+    * @param {string} id
+    * @param {object} attributes
+    *
+    * @returns {ItemTemplate|false}
+    */
+    createItemTemplate(id, attributes) {
+
+        if (typeof id !== "string" || !id) {
+            throw new Error("Invalid id!");
+        }
+
+        if (this._itemTemplates.has(id)) {
+            return false;
+        }
+
+        /** @type {ItemTemplate}  */
+        const result = new ItemTemplate(id, attributes.name, attributes.itemSlots);
+
+        for (const key of Object.keys(result)) {
+            if (key === "id") {
+                continue;
+            }
+            if (key in attributes) {
+                result[key] = attributes[key];
+            }
+        }
+
+
+        this._itemTemplates.set(id, result);
+
+        return result;
     }
 }

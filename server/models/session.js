@@ -1,7 +1,7 @@
 import WebSocket from 'ws';
 import { Game } from './game.js';
 import { Player } from './player.js';
-import { StateInterface } from './states/interface.js';
+import { StateInterface } from '../states/interface.js';
 import * as msg from '../utils/messages.js';
 import figlet from 'figlet';
 
@@ -20,18 +20,44 @@ export class Session {
     }
 
     /** @type {Player} */
-    player;
+    _player;
+    get player() {
+        return this._player;
+    }
+
+    /** @param {Player} player */
+    set player(player) {
+
+        if (player instanceof Player) {
+            this._player = player;
+            return;
+        }
+
+        if (player === null) {
+            this._player = null;
+            return;
+        }
+
+        throw Error(`Can only set player to null or instance of Player, but received ${typeof player}`);
+    }
+
 
     /** @type {WebSocket} */
-    websocket;
+    _websocket;
 
     /**
      * @param {WebSocket} websocket
      * @param {Game} game
      */
     constructor(websocket, game) {
-        this.websocket = websocket;
+        this._websocket = websocket;
         this._game = game;
+    }
+
+    /** Close the session and websocket */
+    close() {
+        this._websocket.close();
+        this._player = null;
     }
 
     /**
@@ -41,7 +67,7 @@ export class Session {
      * @param {...any} args
      */
     send(messageType, ...args) {
-        this.websocket.send(JSON.stringify([messageType, ...args]));
+        this._websocket.send(JSON.stringify([messageType, ...args]));
     }
 
     sendFigletMessage(message) {
@@ -62,26 +88,32 @@ export class Session {
 
     /**
      * @param {string} type prompt type (username, password, character name, etc.)
-     * @param {string} message The prompting message (please enter your character's name)
+     * @param {string|string[]} message The prompting message (please enter your character's name)
+     * @param {string} tag helps with message routing and handling.
      */
-    sendPrompt(type, message,...args) {
+    sendPrompt(type, message, tag="default", ...args) {
         if (Array.isArray(message)) {
             message = message.join("\n");
         }
-        this.send(msg.PROMPT, type, message,...args);
+        this.send(msg.PROMPT, type, message, tag, ...args);
     }
 
     /** @param {string} message The error message to display to player */
-    sendError(message,...args) {
+    sendError(message, ...args) {
         this.send(msg.ERROR, message, ...args);
     }
 
+    /** @param {string} message The error message to display to player */
+    sendDebug(message, ...args) {
+        this.send(msg.DEBUG, message, ...args);
+    }
+
     /** @param {string} message The calamitous error to display to player */
-    sendCalamity(message,...args) {
+    sendCalamity(message, ...args) {
         this.send(msg.CALAMITY, message, ...args);
     }
 
-    sendSystemMessage(arg0,...rest) {
+    sendSystemMessage(arg0, ...rest) {
         this.send(msg.SYSTEM, arg0, ...rest);
     }
 

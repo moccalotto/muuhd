@@ -1,5 +1,4 @@
-import { Session } from "../session.js";
-import { ClientMessage } from "../../utils/messages.js";
+import { Session } from "../models/session.js";
 import { CharacterCreationState } from "./characterCreation.js";
 import { AwaitCommandsState } from "./awaitCommands.js";
 
@@ -20,8 +19,6 @@ export class JustLoggedInState {
             "You can type “:quit” at any time to quit the game",
             "",
         ]);
-
-
 
         // 
         // Check if we need to create characters for the player

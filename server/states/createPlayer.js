@@ -1,8 +1,9 @@
-import { Session } from "../session.js";
-import * as msg from "../../utils/messages.js";
-import * as security from "../../utils/security.js";
-import { AuthState } from "./auth.js";
-import { Player } from "../player.js";
+import { Session } from "../models/session.js";
+import * as msg from "../utils/messages.js";
+import * as security from "../utils/security.js";
+import { Player } from "../models/player.js";
+import { AuthState } from "./Auth.js";
+import { Config } from "../config.js";
 
 const USERNAME_PROMPT = "Enter a valid username (4-20 characters, [a-z], [A-Z], [0-9], and underscore)";
 const PASSWORD_PROMPT = "Enter a valid password";
@@ -37,6 +38,13 @@ export class CreatePlayerState {
     }
 
     onAttach() {
+        //
+        // If there are too many players, stop allowing new players in.
+        if (this.session.game._players.size >= Config.maxPlayers) {
+            this.session.sendCalamity("Server is full, no more players can be created");
+            this.session.close();
+        }
+
         this.session.sendFigletMessage("New Player");
         this.session.sendPrompt("username", USERNAME_PROMPT);
 
@@ -93,7 +101,7 @@ export class CreatePlayerState {
 
         this._player = player;
 
-        this.session.sendMessage("Username available 👌");
+        this.session.sendSystemMessage("salt", player.salt);
         this.session.sendMessage(`Username _*${message.username}*_ is available, and I've reserved it for you :)`);
         this.session.sendPrompt("password", PASSWORD_PROMPT);
         this.setMessageHandler(this.receivePassword);

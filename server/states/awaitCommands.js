@@ -1,5 +1,5 @@
-import * as msg from "../../utils/messages.js";
-import { Session } from "../session.js";
+import * as msg from "../utils/messages.js";
+import { Session } from "../models/session.js";
 
 /**
  * Main game state
@@ -41,7 +41,7 @@ export class AwaitCommandsState {
                 break;
             case "quit":
                 this.session.sendMessage("The quitting quitter quits, typical... Cya");
-                this.session.websocket.close();
+                this.session._websocket.close();
                 break;
             default:
                 this.session.sendMessage(`Unknown command: ${message.command}`);

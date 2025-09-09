@@ -1,5 +1,3 @@
-import { cleanName } from "../utils/id.js";
-
 /**
  * Item templates are the built-in basic items of the game.
  * A character cannot directly own one of these items,
@@ -7,74 +5,69 @@ import { cleanName } from "../utils/id.js";
  * generate these CharacterItems.
  */
 export class ItemTemplate {
-    _id;
-    _name;
-    _description;
-    _itemSlots;
+    /** @constant @readonly @type {string} Item's machine-friendly name */
+    id;
 
-    /** @type {string} Item's machine-friendly name */
-    get id() {
-        return this._id;
-    }
+    /** @constant @readonly @type {string} Item's human-friendly name */
+    name;
 
-    /** @type {string} Item's human-friendly name */
-    get name() {
-        return this._name;
-    }
+    /** @constant @readonly @type {string} Item's Description */
+    description;
 
-    /** @type {string} Item's Description */
-    get description() {
-        return this._description;
-    }
+    /** @constant @readonly @type {number} Number of Item Slots taken up by this item. */
+    itemSlots;
 
-    /** @type {number} Number of Item Slots taken up by this item. */
-    get itemSlots() {
-        return this._itemSlots;
-    }
+    /** @constant @readonly @type {number?} How much damage (if any) does this item deal */
+    damage;
+
+    /** @constant @readonly @type {string?} Which special effect is triggered when successfull attacking with this item? */
+    specialEffect;
+
+    /** @constant @readonly @type {boolean?} Can this item be used as a melee weapon? */
+    melee;
+
+    /** @constant @readonly @type {boolean?} Can this item be used as a ranged weapon? */
+    ranged;
+
+    /** @constant @readonly @type {string?} Type of ammo that this item is, or that this item uses */
+    ammoType;
 
     /**
      * Constructor
      *
+     * @param {string=null} id Item's machine-friendly name.
      * @param {string} name. The Item's Name.
      * @param {number} itemSlots number of item slots the item takes up in a character's inventory.
-     * @param {string} description Item's detailed description.
-     * @param {string=} id Item's machine-friendly name.
      */
-    constructor(name, itemSlots, description, id) {
-        if (typeof name !== "string") {
-            throw new Error("Name must be a string, but " + typeof name + " given.");
-        }
-        if (typeof description === "undefined") {
-            description = "";
-        }
-        if (typeof description !== "string") {
-            throw new Error("Name must be a string, but " + typeof name + " given.");
-        }
-        if (!Number.isFinite(itemSlots)) {
-            throw new Error("itemSlots must be a finite number!");
-        }
-        if (typeof id === "undefined") {
-            id = cleanName(name);
-        }
-        if (typeof id !== "string") {
+    constructor(id, name, itemSlots) {
+
+        if (typeof id !== "string" || id.length < 1) {
             throw new Error("id must be a string!");
         }
 
-        this._name = name;
-        this._id = id;
-        this._itemSlots = Number(itemSlots);
-        this._description = "";
+        if (typeof name !== "string" || name.length < 1) {
+            throw new Error("Name must be a string, but " + typeof name + " given.");
+        }
+
+        if (!Number.isFinite(itemSlots)) {
+            throw new Error("itemSlots must be a finite number!");
+        }
+
+        this.name = name;
+        this.id = id;
+        this.itemSlots = Number(itemSlots);
     }
 
+    //
+    // Spawn a new item!
+    /** @returns {Item} */
     createItem() {
-        return new ChracterItem(this._id, this._name, this._description, this._itemSlots);
-    }
-
-    static getOrCreate(id, name, description, itemSlots) {
-    }
-
-    static seed() {
-        this
+        return new ChracterItem(
+            this.id,
+            this.name,
+            this.description,
+            this.itemSlots,
+        );
     }
 }
 
@@ -98,8 +91,8 @@ export class ItemTemplate {
  * Another bonus is, that the game can spawn custom items that arent even in the ItemTemplate Set.
  */
 export class CharacterItem {
-    /** @type {string?} The unique name if the ItemTemplate this item is based on. May be null. */
-    templateItemId; // We use the id instead of a pointer, could make garbage collection better.
+    /** @type {ItemTemplate|null} The template that created this item. Null if no such template exists [anymore]. */
+    itemTemplate; // We use the id instead of a pointer, could make garbage collection better.
 
     /** @type {string} The player's name for this item. */
     name;

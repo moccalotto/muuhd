@@ -1,5 +1,5 @@
-import { ClientMessage } from "../../utils/messages.js";
-import { Session } from "../session.js";
+import { ClientMessage } from "../utils/messages.js";
+import { Session } from "../models/session.js";
 
 /** @interface */
 export class StateInterface {
