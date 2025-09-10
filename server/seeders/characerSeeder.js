@@ -73,6 +73,11 @@ export class CharacterSeeder {
 
         // Rolling skills
 
+        c.name =
+            this.game.rng.oneOf("sir", "madam", "mister", "miss", "", "", "") +
+            " random " +
+            this.game.rng.get().toString();
+
         c.awareness = roll.d6() + 2;
         c.grit = roll.d6() + 2;
         c.knowledge = roll.d6() + 2;
@@ -126,6 +131,10 @@ export class CharacterSeeder {
         }
 
         this.applyFoundation(c);
+
+        console.log(c);
+
+        return c;
     }
 
     /**
@@ -141,7 +150,9 @@ export class CharacterSeeder {
     createParty(player, partySize) {
         //
         for (let i = 0; i < partySize; i++) {
-            const character = this.createCharacter(player);
+            player.addCharacter(
+                this.createCharacter(player), //
+            );
         }
     }
 
@@ -149,9 +160,9 @@ export class CharacterSeeder {
      * @param {Character} c
      * @param {string|number} Foundation to add to character
      */
-    applyFoundation(c, foundation = "random") {
+    applyFoundation(c, foundation = ":random") {
         switch (foundation) {
-            case "random":
+            case ":random":
                 return this.applyFoundation(c, roll.dice(3));
                 break;
 
@@ -193,12 +204,12 @@ export class CharacterSeeder {
                     c, //
                     ":armor.light.leather",
                     ":weapon.light.sickle",
-                    ":kits.poisoners_kit",
-                    ":kits.healers_kit",
+                    ":kit.poisoners_kit",
+                    ":kit.healers_kit",
                 );
                 this.addSkillsToCharacter(
                     c, //
-                    ":armor.light.leather",
+                    ":armor.light.sleather",
                     ":armor.light.hide",
                     ":weapon.light.sickle",
                 );
@@ -231,6 +242,7 @@ export class CharacterSeeder {
                     ":weapon.light.rapier",
                     ":weapon.light.dagger",
                 );
+                break;
 
             /*
 

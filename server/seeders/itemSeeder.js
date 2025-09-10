@@ -31,7 +31,6 @@ export class ItemSeeder {
             itemSlots: 0.5,
             damage: 3,
             melee: true,
-            skills: [":weapon.light"],
             ranged: true,
             specialEffect: ":effect.weapon.fast",
         });
@@ -41,7 +40,6 @@ export class ItemSeeder {
             description: "For cutting nuts, and branches",
             itemSlots: 1,
             damage: 4,
-            skills: [":weapon.light"],
             specialEffect: ":effect.weapon.sickle",
         });
 
@@ -50,11 +48,14 @@ export class ItemSeeder {
             description: "Spikes with gauntlets on them!",
             itemSlots: 1,
             damage: 5,
-            skills: [
-                // Spiked gauntlets are :Weird so you must be specially trained to use them.
-                // This is done by having a skill that exactly matches the weapon's blueprintId
-                ":weapon.weird.spiked_gauntlets",
-            ],
+            specialEffect: "TBD",
+        });
+
+        this.game.addItemBlueprint(":weapon.light.rapier", {
+            name: "Rapier",
+            description: "Fancy musketeer sword",
+            itemSlots: 1,
+            damage: 5,
             specialEffect: "TBD",
         });
 
@@ -70,7 +71,6 @@ export class ItemSeeder {
             description: "Padded and hardened leather with metal stud reinforcement",
             itemSlots: 3,
             specialEffect: "TBD",
-            skills: [":armor.light"],
             armorHitPoints: 10,
         });
         this.game.addItemBlueprint(":armor.light.leather", {
@@ -78,7 +78,6 @@ export class ItemSeeder {
             description: "Padded and hardened leather",
             itemSlots: 2,
             specialEffect: "TBD",
-            skills: [":armor.light"],
             armorHitPoints: 6,
         });
 

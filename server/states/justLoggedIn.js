@@ -4,32 +4,32 @@ import { AwaitCommandsState } from "./awaitCommands.js";
 
 /** @interface */
 export class JustLoggedInState {
-  /** @param {Session} session */
-  constructor(session) {
-    /** @type {Session} */
-    this.session = session;
-  }
-
-  // Show welcome screen
-  onAttach() {
-    this.session.sendMessage([
-      "",
-      "Welcome",
-      "",
-      "You can type “:quit” at any time to quit the game",
-      "",
-    ]);
-
-    //
-    // Check if we need to create characters for the player
-    if (this.session.player.characters.size === 0) {
-      this.session.sendMessage(
-        "You haven't got any characters, so let's make some\n\n",
-      );
-      this.session.setState(new PartyCreationState(this.session));
-      return;
+    /** @param {Session} session */
+    constructor(session) {
+        /** @type {Session} */
+        this.session = session;
     }
 
-    this.session.setState(new AwaitCommandsState(this.session));
-  }
+    // Show welcome screen
+    onAttach() {
+        this.session.sendMessage(["", "Welcome", "", "You can type “:quit” at any time to quit the game", ""]);
+
+        //
+        // Check if we need to create characters for the player
+        if (this.session.player.characters.size === 0) {
+            this.session.sendMessage("You haven't got any characters, so let's make some\n\n");
+            this.session.setState(new PartyCreationState(this.session));
+            return;
+        }
+
+        const replacer = (key, value) => {
+            if (value instanceof Set) {
+                return [...value]; // turn Set into array
+            }
+            return value;
+        }
+        this.session.sendMessage(JSON.stringify(this.session.player.characters.entries(), replacer, "\t"));
+
+        this.session.setState(new AwaitCommandsState(this.session));
+    }
 }

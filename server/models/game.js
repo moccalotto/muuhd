@@ -8,6 +8,7 @@
  */
 
 import { isIdSane, miniUid } from "../utils/id.js";
+import { Xorshift32 } from "../utils/random.js";
 import { Character } from "./character.js";
 import { ItemAttributes, ItemBlueprint } from "./item.js";
 import { Player } from "./player.js";
@@ -32,6 +33,24 @@ export class Game {
      * @type {Map<string,Player>} Map of users in the game username->Player
      */
     _players = new Map();
+
+
+    /** @protected @type {Xorshift32} */
+    _rng;
+
+    /** @type {Xorshift32} */
+    get rng() {
+        return this._rng;
+    }
+
+    /** @param {number} rngSeed Seed number used for randomization */
+    constructor(rngSeed) {
+        if (!Number.isInteger(rngSeed)) {
+            throw new Error("rngSeed must be an integer");
+        }
+
+        this._rng = new Xorshift32(rngSeed);
+    }
 
     getPlayer(username) {
         return this._players.get(username);

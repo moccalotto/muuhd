@@ -12,9 +12,9 @@ import { PlayerSeeder } from "./playerSeeder.js";
  */
 export class GameSeeder {
     /** @returns {Game} */
-    createGame() {
+    createGame(rngSeed) {
         /** @protected @constant @readonly @type {Game} */
-        this.game = new Game();
+        this.game = new Game(rngSeed);
 
         this.work(); // Seeding may take a bit, so let's defer it so we can return early.
 

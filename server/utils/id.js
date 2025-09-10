@@ -1,6 +1,14 @@
-const UID_DIGITS = 12;
-const MINI_UID_REGEX = /\.uid\.[a-z0-9]{6,}$/;
-const ID_SANITY_REGEX = /^:([a-z0-9]+\.)*[a-z0-9_]+$/;
+import * as regex from "./regex.js";
+
+const MINI_UID_REGEX = regex.pretty(
+    "\.uid\.", //           Mini-uids always begin with ".uid."
+    "[a-z0-9]{6,}$", //     Terminated by 6 or more random numbers and lowercase letters.
+);
+const ID_SANITY_REGEX = regex.pretty(
+    "^:", //                All ids start with a colon
+    "([a-z0-9]+\.)*?", //   Middle -optional- part :myid.gogle.thing.thang.thong
+    "[a-z0-9_]+$", //       The terminating part of the id is numbers, lowercase letters, and -notably- underscores.
+);
 
 /**
  * Sanity check a string to see if it is a potential id.
@@ -17,17 +25,22 @@ export function isIdSane(id) {
         return false;
     }
 
-    return ID_SANITY_REGEX.test(id);
+    if (!ID_SANITY_REGEX.test(id)) {
+        return false;
+    }
+
+    return true;
 }
 
 /**
- * @returns {string} crypto-unsafe pseudo random number.
+ * @returns {string} crypto-unsafe pseudo random numbe"r.
  *
  * Generate a random number, convert it to base36, and return it as a string with 7-8 characters.
  */
 export function miniUid() {
-    // we use 12 digits, but we could go up to 16
-    return Number(Math.random().toFixed(UID_DIGITS).substring(2)).toString(36);
+    // we use 12 digits, but we could go all the way to 16
+    const digits = 12;
+    return Number(Math.random().toFixed(digits).substring(2)).toString(36);
 }
 
 /**

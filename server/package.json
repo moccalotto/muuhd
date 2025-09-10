@@ -30,6 +30,7 @@
     "prettier": {
         "tabWidth": 4,
         "printWidth": 120,
+        "quoteProps": "consistent",
         "singleQuote": false,
         "trailingComma": "all",
         "tabWidth": 4,
