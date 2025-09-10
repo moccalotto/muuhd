@@ -3,11 +3,11 @@ import { Session } from "../models/session.js";
 
 /** @interface */
 export class StateInterface {
-    /** @param {Session} session */
-    constructor(session) { }
+  /** @param {Session} session */
+  constructor(session) {}
 
-    onAttach() { }
+  onAttach() {}
 
-    /** @param {ClientMessage} message */
-    onMessage(message) {}
+  /** @param {ClientMessage} message */
+  onMessage(message) {}
 }

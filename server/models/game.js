@@ -7,15 +7,14 @@
  * Serializing this object effectively saves the game.
  */
 
-import { miniUid } from "../utils/id.js";
+import { isIdSane, miniUid } from "../utils/id.js";
 import { Character } from "./character.js";
-import { ItemTemplate } from "./item.js";
+import { ItemAttributes, ItemBlueprint } from "./item.js";
 import { Player } from "./player.js";
 
 export class Game {
-
-    /** @type {Map<string,ItemTemplate>} List of all item templates in the game */
-    _itemTemplates = new Map();
+    /** @type {Map<string,ItemBlueprint>} List of all item blueprints in the game */
+    _itemBlueprints = new Map();
 
     /** @type {Map<string,Location>} The list of locations in the game */
     _locations = new Map();
@@ -40,10 +39,10 @@ export class Game {
 
     /**
      * Atomic player creation.
-     * 
-     * @param {string} username 
-     * @param {string?} passwordHash 
-     * @param {string?} salt 
+     *
+     * @param {string} username
+     * @param {string?} passwordHash
+     * @param {string?} salt
      *
      * @returns {Player|null} Returns the player if username wasn't already taken, or null otherwise.
      */
@@ -55,7 +54,7 @@ export class Game {
         const player = new Player(
             username,
             typeof passwordHash === "string" ? passwordHash : "",
-            typeof salt === "string" && salt.length > 0 ? salt : miniUid()
+            typeof salt === "string" && salt.length > 0 ? salt : miniUid(),
         );
 
         this._players.set(username, player);
@@ -64,38 +63,45 @@ export class Game {
     }
 
     /**
-    * Create an ItemTemplate with a given ID
-    *
-    * @param {string} id
-    * @param {object} attributes
-    *
-    * @returns {ItemTemplate|false}
-    */
-    createItemTemplate(id, attributes) {
-
-        if (typeof id !== "string" || !id) {
-            throw new Error("Invalid id!");
+     * Create an ItemBlueprint with a given blueprintId
+     *
+     * @param {string} blueprintId
+     * @param {ItemAttributes} attributes
+     *
+     * @returns {ItemBlueprint|false}
+     */
+    addItemBlueprint(blueprintId, attributes) {
+        console.log(attributes);
+        if (typeof blueprintId !== "string" || !blueprintId) {
+            throw new Error("Invalid blueprintId!");
         }
 
-        if (this._itemTemplates.has(id)) {
-            return false;
+        const existing = this._itemBlueprints.get(blueprintId);
+
+        if (existing) {
+            console.debug("we tried to create the same item blueprint more than once", blueprintId, attributes);
+            return existing;
         }
 
-        /** @type {ItemTemplate}  */
-        const result = new ItemTemplate(id, attributes.name, attributes.itemSlots);
+        attributes.blueprintId = blueprintId;
 
-        for (const key of Object.keys(result)) {
-            if (key === "id") {
-                continue;
-            }
-            if (key in attributes) {
-                result[key] = attributes[key];
-            }
-        }
+        const result = new ItemBlueprint(attributes);
 
-
-        this._itemTemplates.set(id, result);
+        this._itemBlueprints.set(blueprintId, result);
 
         return result;
+    }
+
+    /**
+     * @param {string} blueprintId
+     * @returns {ItemBlueprint?}
+     */
+    getItemBlueprint(blueprintId) {
+        if (!isIdSane(blueprintId)) {
+            throw new Error(`blueprintId >>${blueprintId}<< is insane!`);
+        }
+        const tpl = this._itemBlueprints.get(blueprintId);
+
+        return tpl || undefined;
     }
 }

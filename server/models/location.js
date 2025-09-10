@@ -9,37 +9,37 @@ import { Portal } from "./portal";
  * or magical portals to distant locations.
  */
 export class Location {
-    /** @protected @type string */
-    _id;
-    get id() {
-        return this._id;
-    }
+  /** @protected @type string */
+  _id;
+  get id() {
+    return this._id;
+  }
 
-    /** @protected @type string */
-    _name;
-    get name() {
-        return this._name;
-    }
+  /** @protected @type string */
+  _name;
+  get name() {
+    return this._name;
+  }
 
-    /** @protected @type string */
-    _description;
-    get description() {
-        return this._description;
-    }
+  /** @protected @type string */
+  _description;
+  get description() {
+    return this._description;
+  }
 
-    /** @protected @type {Map<string,Portal>} */
-    _portals = new Map();
-    get portals() {
-        return this._portals;
-    }
+  /** @protected @type {Map<string,Portal>} */
+  _portals = new Map();
+  get portals() {
+    return this._portals;
+  }
 
-    /**
-     */
-    constructor(id, name, description) {
-        this._id = id;
-        this._name = name;
-        this._description = description;
-    }
+  /**
+   */
+  constructor(id, name, description) {
+    this._id = id;
+    this._name = name;
+    this._description = description;
+  }
 }
 
 const l = new Location("foo", "bar", "baz");

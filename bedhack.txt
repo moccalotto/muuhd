@@ -20,12 +20,12 @@
 └────────────────────────────────────────────────────────────────────────────────┘│e) 2 uncursed lichen corpses                                                │
 ┌────────────────────────────────────────────────────────────────────────────────┐│Scrolls                                                                     │
 │                                                                                ││j) 2 uncursed scrolls labeled DAIYEN FOOELS                                 │
-│                                                                 ����������Ŀ   ││PD) uncursed scroll labeled ELAM EBOW                                        │
-│  �����Ŀ        ��������������������������������*[���[[���������������������   ││TW) 2 cursed scrolls labeled GNIK SISI VLE                                   │
-│  �����>���[��)��       ���������������Ŀ��������������Ŀ          �����������   ││ms) 2 uncursed scrolls labeled HACKEM MUCHE                                  │
-│  �����[� ����������    ������������������ ��������������    ���������������   ││dp) uncursed scroll labeled KIRJE                                            │
-│  � �����          ����������������������  ��������������    �   ���<�������   ││Uu) uncursed scroll labeled TEMOV                                            │
-│                       ���������������������������������������   �����������   ││GQ) 2 uncursed scrolls labeled VELOX NEB                                     │
+│                                                                 ����������Ŀ    ││PD) uncursed scroll labeled ELAM EBOW                                        │
+│  �����Ŀ        ��������������������������������*[���[[���������������������    ││TW) 2 cursed scrolls labeled GNIK SISI VLE                                   │
+│  �����>���[��)��       ���������������Ŀ��������������Ŀ          �����������    ││ms) 2 uncursed scrolls labeled HACKEM MUCHE                                  │
+│  �����[� ����������    ������������������ ��������������    ���������������    ││dp) uncursed scroll labeled KIRJE                                            │
+│  � �����          ����������������������  ��������������    �   ���<�������    ││Uu) uncursed scroll labeled TEMOV                                            │
+│                       ���������������������������������������   �����������    ││GQ) 2 uncursed scrolls labeled VELOX NEB                                     │
 │                       ����������������������������������        ������������   ││X) blessed scroll labeled VERR YED HORRE                                    │
 │                       ��������Ŀ������������������Ŀ�����                        ││V) blessed scroll called ASHPD enchARM|rmvCUR|enchWEP                       │
 │                       ���������������������������� �����                       ││Wands                                                                       │

@@ -8,18 +8,18 @@
  *  @todo Add encounters to portals
  */
 export class Portal {
-    /**
-     * Target Location.
-     */
-    _targetLocationId;
+  /**
+   * Target Location.
+   */
+  _targetLocationId;
 
-    /**
-     * Description shown to the player when they inspect the portal from the source location.
-     */
-    _description;
+  /**
+   * Description shown to the player when they inspect the portal from the source location.
+   */
+  _description;
 
-    /**
-     * Description shown to the player when they traverse the portal.
-     */
-    _traversalDescription;
+  /**
+   * Description shown to the player when they traverse the portal.
+   */
+  _traversalDescription;
 }

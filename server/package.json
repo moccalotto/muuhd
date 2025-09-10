@@ -1,7 +1,7 @@
 {
     "name": "websocket-mud",
     "version": "1.0.0",
-    "description": "A Multi-User Dungeon game using WebSockets and Node.js",
+    "description": "A Muuhlti-User Dungeon Game. Is there a secret cow level?",
     "main": "server.js",
     "type": "module",
     "scripts": {
@@ -14,7 +14,7 @@
         "game",
         "multiplayer"
     ],
-    "author": "Your Name",
+    "author": "Kim Ravn Hansen",
     "license": "MIT",
     "dependencies": {
         "figlet": "^1.8.2",
@@ -26,5 +26,14 @@
     },
     "engines": {
         "node": ">=14.0.0"
+    },
+    "prettier": {
+        "tabWidth": 4,
+        "printWidth": 120,
+        "singleQuote": false,
+        "trailingComma": "all",
+        "tabWidth": 4,
+        "bracketSpacing": true,
+        "objectWrap": "preserve"
     }
 }
