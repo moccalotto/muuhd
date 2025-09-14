@@ -1,9 +1,9 @@
 import WebSocket from "ws";
 import { Player } from "./player.js";
-import * as msg from "../utils/messages.js";
 import { mustBeString, mustBe } from "../utils/mustbe.js";
 import { Scene } from "../scenes/scene.js";
 import { gGame } from "./globals.js";
+import { formatMessage, MessageType } from "../utils/messages.js";
 
 export class Session {
     /** @type {WebSocket} */
@@ -71,7 +71,7 @@ export class Session {
     /**
      * Send a message via our websocket.
      *
-     * @param {string|number} messageType
+     * @param {MessageType} messageType The message "header" (the first arg in the array sent to the client) holds the message type.
      * @param {...any} args
      */
     send(messageType, ...args) {
@@ -79,7 +79,7 @@ export class Session {
             console.error("Trying to send a message without a valid websocket", messageType, args);
             return;
         }
-        this._websocket.send(JSON.stringify([messageType, ...args]));
+        this._websocket.send(formatMessage(messageType, ...args));
     }
 
     /**
@@ -100,7 +100,7 @@ export class Session {
         }
 
         this.send(
-            msg.PROMPT, // message type
+            MessageType.PROMPT, // message type
             text, // TODO: prompt text must be string or an array of strings
             mustBe(options, "object"),
         );
@@ -113,12 +113,12 @@ export class Session {
      * @param {object?} options message options for the client.
      */
     sendText(text, options = {}) {
-        this.send(msg.TEXT, text, options);
+        this.send(MessageType.TEXT, text, options);
     }
 
     /** @param {string|string[]} errorMessage */
-    sendError(errorMessage) {
-        this.send(msg.ERROR, mustBeString(errorMessage));
+    sendError(errorMessage, options = { verbatim: true }) {
+        this.send(MessageType.ERROR, mustBeString(errorMessage), options);
     }
 
     /**
@@ -128,15 +128,15 @@ export class Session {
     calamity(errorMessage) {
         //
         // The client should know not to format calamaties anyway, but we add “preformatted” anyway
-        this.send(msg.CALAMITY, errorMessage, { preformatted: true });
+        this.send(MessageType.CALAMITY, errorMessage, { preformatted: true });
         this.close();
     }
 
     /**
-     * @param {string} systemMessageType
+     * @param {MessageType} systemMessageType
      * @param {any?} value
      */
     sendSystemMessage(systemMessageType, value = undefined) {
-        this.send(msg.SYSTEM, mustBeString(systemMessageType), value);
+        this.send(MessageType.SYSTEM, mustBeString(systemMessageType), value);
     }
 }

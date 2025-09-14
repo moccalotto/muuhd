@@ -12,8 +12,14 @@ export function mustBe(value, ...types) {
         return value;
     }
 
+    const isArray = Array.isArray(value);
+
+    if (isArray && (types.includes("any[]") || types.includes("array"))) {
+        return value;
+    }
+
     // NOTE: only checks first element of array if it's a string.
-    if (types.includes("strings[]") && Array.isArray(value) && (value.length === 0 || typeof value[0] === "string")) {
+    if (isArray && types.includes("strings[]") && (value.length === 0 || typeof value[0] === "string")) {
         return value;
     }
 
@@ -22,12 +28,6 @@ export function mustBe(value, ...types) {
 
 export function mustBeString(value) {
     return mustBe(value, "string");
-}
-
-export function mustBeInteger(value) {
-    if (typeof value === "number" && Number.isSafeInteger(value)) {
-        return value;
-    }
 }
 
 /**

@@ -1,10 +1,10 @@
 import figlet from "figlet";
 import { gGame } from "../models/globals.js";
-import * as msg from "../utils/messages.js";
 import { Session } from "../models/session.js";
 import { Scene } from "./scene.js";
-import { WebsocketMessage } from "../utils/messages.js";
+import { MessageType, WebsocketMessage } from "../utils/messages.js";
 import { mustBe, mustBeString } from "../utils/mustbe.js";
+import { sprintf } from "sprintf-js";
 
 /**
  * @typedef {object} PromptMethods
@@ -19,8 +19,13 @@ import { mustBe, mustBeString } from "../utils/mustbe.js";
  * - onColon(...)
  */
 export class Prompt {
-    /** @protected @readonly @constant @type {Scene} */
-    scene;
+    /** @private @readonly @type {Scene} */
+    _scene;
+
+    /** @type {Scene} */
+    get scene() {
+        return this._scene;
+    }
 
     //
     // Extra info about the prompt we send to the client.
@@ -58,7 +63,7 @@ export class Prompt {
         if (!(scene instanceof Scene)) {
             throw new Error("Expected an instance of >>Scene<< but got " + typeof scene);
         }
-        this.scene = scene;
+        this._scene = scene;
     }
 
     /**
@@ -92,24 +97,42 @@ export class Prompt {
      * Triggered when a user types a :command that begins with a colon
      *
      * @param {string} command
-     * @param {string} argLine
+     * @param {any[]} args
      */
-    onColon(command, argLine) {
-        const methodName = "onColon_" + command;
-        const method = this[methodName];
-        if (typeof method === "function") {
-            method.call(this, argLine);
+
+    onColon(command, args) {
+        const methodName = "onColon__" + command;
+        const property = this[methodName];
+
+        //
+        // Default: we have no handler for the Foo command,
+        // So let's see if daddy can handle it.
+        if (property === undefined) {
+            return this.scene.onColon(command, args);
+        }
+
+        //
+        // If the prompt has a method called onColon_foo() =>
+        if (typeof property === "function") {
+            property.call(this, args);
             return;
         }
 
         //
-        // For static "denial of commands" such as :inv ==> "you cannot access your inventory right now"
-        if (typeof method === "string") {
-            this.sendText(method);
+        // If the prompt has a _string_ called onColon_foo =>
+        if (typeof property === "string") {
+            this.sendText(property);
+            return;
         }
 
-        // :inv ==> you cannot INV right now
-        this.sendError(`You cannot ${command.toUpperCase()} right now`);
+        //
+        // We found a property that has the right name but the wrong type.
+        throw new Error(
+            [
+                `Logic error. Prompt has a handler for a command called ${command}`,
+                `but it is neither a function or a string, but a ${typeof property}`,
+            ].join(" "),
+        );
     }
 
     /**
@@ -167,7 +190,7 @@ export class Prompt {
     }
 
     /**
-     * @param {string} systemMessageType
+     * @param {string} systemMessageType  The subtype of the system message (dev, salt, username, etc.)
      * @param {any?} value
      */
     sendSystemMessage(...args) {
@@ -184,13 +207,6 @@ export class Prompt {
 
     //
     // Easter ægg
-    onColon_pull_out_wand = "You cannot pull out your wand right now! But thanks for trying 😘🍌🍆";
-
-    //
-    // Easter ægg2
-    onColon_imperial(argLine) {
-        const n = Number(argLine);
-
-        this.sendText(`${n} centimeters is only ${n / 2.54} inches. This is why americans have such small wands`);
-    }
+    // Example of having a string as a colon-handler
+    onColon__pull_out_wand = "You cannot pull out your wand right now! But thanks for trying 😘🍌🍆";
 }

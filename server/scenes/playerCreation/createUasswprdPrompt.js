@@ -1,7 +1,6 @@
 import { Prompt } from "../prompt.js";
 import * as security from "../../utils/security.js";
 import { Config } from "../../config.js";
-import { context } from "../../utils/messages.js";
 
 export class CreatePasswordPrompt extends Prompt {
     //

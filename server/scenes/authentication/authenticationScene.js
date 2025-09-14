@@ -2,10 +2,10 @@ import { PasswordPrompt } from "./passwordPrompt.js";
 import { Player } from "../../models/player.js";
 import { Scene } from "../scene.js";
 import { UsernamePrompt } from "./usernamePrompt.js";
+import { CreateUsernamePrompt } from "../playerCreation/createUsernamePrompt.js";
 
 /** @property {Session} session */
 export class AuthenticationScene extends Scene {
-
     introText = [
         "= Welcome", //
     ];
@@ -15,13 +15,13 @@ export class AuthenticationScene extends Scene {
 
     onReady() {
         // current prompt
-        this.doPrompt(new UsernamePrompt(this));
+        this.show(UsernamePrompt);
     }
 
     /** @param {Player} player */
     usernameAccepted(player) {
         this.player = player;
-        this.doPrompt(new PasswordPrompt(this));
+        this.show(PasswordPrompt);
     }
 
     passwordAccepted() {
@@ -33,5 +33,9 @@ export class AuthenticationScene extends Scene {
         } else {
             this.session.setScene("new JustLoggedInScene");
         }
+    }
+
+    createPlayer() {
+        scene.session.setScene(new PlayerCreationScene(this.scene));
     }
 }

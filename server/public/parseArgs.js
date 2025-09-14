@@ -1,5 +1,3 @@
-import { mustBeString } from "./mustbe.js";
-
 /**
  * Parse a command string into arguments. For use with colon-commands.
  *
@@ -7,7 +5,9 @@ import { mustBeString } from "./mustbe.js";
  * @returns {(string|number)[]} Command arguments
  */
 export function parseArgs(cmdString) {
-    mustBeString(cmdString);
+    if (typeof cmdString === "string") {
+        throw new Error("Expected string. GoT a finger in the eye instead");
+    }
     const args = [];
     const quoteChars = ["'", '"', "`"];
     const backslash = "\\";
@@ -16,7 +16,8 @@ export function parseArgs(cmdString) {
     let inQuotes = false; // are we inside quotes of some kind?
     let currentQuoteChar = ""; // if were in quotes, which are they?
 
-    const push = (value) => {
+    // helper function
+    const pushVal = (value) => {
         const n = Number(value);
         if (Number.isSafeInteger(n)) {
             args.push(n);
@@ -39,7 +40,7 @@ export function parseArgs(cmdString) {
             } else if (char === " " || char === "\t") {
                 // Whitespace - end current arg if it exists
                 if (currentArg) {
-                    push(currentArg);
+                    pushVal(currentArg);
                     currentArg = "";
                 }
                 // Skip multiple whitespace
@@ -68,7 +69,7 @@ export function parseArgs(cmdString) {
 
     // Add final argument if exists
     if (currentArg) {
-        push(currentArg);
+        pushVal(currentArg);
     }
 
     if (currentQuoteChar) {
@@ -79,5 +80,3 @@ export function parseArgs(cmdString) {
 
     return args;
 }
-
-console.log(parseArgs("\"k1m er '-9 ' `anus pikke`"));

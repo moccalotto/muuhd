@@ -1,11 +1,16 @@
 import { crackdown } from "./crackdown.js";
+import { parseArgs } from "./parseArgs.js";
+import { MessageType } from "./messages.js";
 
-const MsgContext.REPLY = "R";
-const QUIT = "QUIT";
-const HELP = "HELP";
-const COLON = ":";
+/** Regex to validate if a :help [topic] command i entered correctly */
 const helpRegex = /^:help(?:\s+(.*))?$/;
-const colonRegex = /^:([a-z0-9_]+)(?:\s+(.*))?$/;
+
+/** Regex to validate if a :<command> [args] was entered correctly */
+const colonRegex = /^:([a-z0-9_]+)(?:\s+(.*?)\s*)?$/;
+
+/**
+ * The client that talks to the MUD Sever
+ */
 class MUDClient {
     //
     // Constructor
@@ -14,7 +19,7 @@ class MUDClient {
         this.websocket = null;
 
         /** @type {boolean} Are we in development mode (decided by the server); */
-        this.dev = false;
+        this.isDev = false;
 
         this.promptOptions = {};
         this.shouldReply = false;
@@ -176,8 +181,8 @@ class MUDClient {
         //
         // The quit command has its own message type
         if (inputText === ":quit") {
-            this.send(QUIT);
-            this.writeToOutput("> " + inputText, { class: "input" });
+            this.send(MessageType.QUIT);
+            this.writeToOutput("> " + inputText, { verbatim: true, class: "input" });
             return;
         }
 
@@ -193,8 +198,8 @@ class MUDClient {
         let help = helpRegex.exec(inputText);
         if (help) {
             console.log("here");
-            help[1] ? this.send(HELP, help[1].trim()) : this.send(HELP);
-            this.writeToOutput("> " + inputText, { class: "input" });
+            help[1] ? this.send(MshType.HELP, help[1].trim()) : this.send(MshType.HELP);
+            this.writeToOutput("> " + inputText, { verbatim: true, class: "input" });
             return;
         }
 
@@ -204,19 +209,14 @@ class MUDClient {
         //  _  | (_| (_) | | | | | | | | | | | (_| | | | | (_| |
         // (_)  \___\___/|_| |_| |_|_| |_| |_|\__,_|_| |_|\__,_|
         //------------------------------------------------------
-        let colonCommand = colonRegex.exec(inputText);
-        if (colonCommand) {
-            this.send(COLON, colonCommand[1], colonCommand[2]);
-            this.writeToOutput("> " + inputText, { class: "input" });
+        const colon = colonRegex.exec(inputText);
+        if (colon) {
+            const args = typeof colon[2] === "string" ? parseArgs(colon[2]) : [];
+            this.send(MessageType.COLON, colon[1], args);
+            this.writeToOutput("> " + inputText, { verbatim: true, class: "input colon" });
             return;
         }
 
-        //
-        // The server doesn't want any input from us, so we just ignore this input
-        if (!this.shouldReply) {
-            // the server is not ready for data!
-            return;
-        }
         //                 _
         //  _ __ ___ _ __ | |_   _
         // | '__/ _ \ '_ \| | | | |
@@ -226,6 +226,12 @@ class MUDClient {
         //-------------------------
         // We handle replies below
         //-------------------------
+
+        //
+        if (!this.shouldReply) {
+            // the server is not ready for data!
+            return;
+        }
 
         // The server wants a password, let's hash it before sending it.
         if (this.promptOptions.password) {
@@ -238,14 +244,14 @@ class MUDClient {
             this.username = inputText;
         }
 
-        this.send(REPLY, inputText);
+        this.send(MessageType.REPLY, inputText);
         this.shouldReply = false;
         this.promptOptions = {};
 
         //
         // We add our own command to the output stream so the
         // player can see what they typed.
-        this.writeToOutput("> " + inputText, { class: "input" });
+        this.writeToOutput("> " + inputText, { verbatim: true, class: "input" });
         return;
     }
 
@@ -257,7 +263,7 @@ class MUDClient {
     //
     /** @param {any[]} data*/
     onMessageReceived(data) {
-        if (this.dev) {
+        if (this.isDev) {
             console.debug(data);
         }
         const messageType = data.shift();
@@ -291,7 +297,7 @@ class MUDClient {
             return this.handleDebugMessages(data);
         }
 
-        if (this.dev) {
+        if (this.isDev) {
             this.writeToOutput(`unknown message type: ${messageType}: ${JSON.stringify(data)}`, {
                 class: "debug",
                 verbatim: true,
@@ -314,7 +320,7 @@ class MUDClient {
     // Debug messages let the server send data to be displayed on the player's screen
     // and also logged to the players browser's log.
     handleDebugMessages(data) {
-        if (!this.dev) {
+        if (!this.isDev) {
             return; // debug messages are thrown away if we're not in dev mode.
         }
         this.writeToOutput(data, { class: "debug", verbatim: true });
@@ -332,16 +338,16 @@ class MUDClient {
         console.debug("Incoming system message", data);
 
         /** @type {string} */
-        const messageType = data.shift();
+        const systemMessageType = data.shift();
 
-        switch (messageType) {
+        switch (systemMessageType) {
             case "username":
                 this.username = data[0];
                 break;
             case "dev":
                 // This is a message that tells us that the server is in
                 // "dev" mode, and that we should do the same.
-                this.dev = data[0];
+                this.isDev = !!data[0];
                 this.status.textContent = "[DEV] " + this.status.textContent;
                 break;
             case "salt":
@@ -349,12 +355,12 @@ class MUDClient {
                 console.debug("updating crypto salt", data[0]);
                 break;
             default:
-                console.debug("unknown system message", messageType, data);
+                console.debug("unknown system message", systemMessageType, data);
         }
 
         // If we're in dev mode, we should output all system messages (in a shaded/faint fashion).
-        if (this.dev) {
-            this.writeToOutput(`system message: ${messageType} = ${JSON.stringify(data)}`, { class: "debug" });
+        if (this.isDev) {
+            this.writeToOutput(`system message: ${systemMessageType} = ${JSON.stringify(data)}`, { class: "debug" });
         }
         return;
     }
@@ -436,7 +442,7 @@ class MUDClient {
      * @param {string} className
      */
     updateStatus(message, className) {
-        this.status.textContent = this.dev ? `[DEV] Status: ${message}` : `Status: ${message}`;
+        this.status.textContent = this.isDev ? `[DEV] Status: ${message}` : `Status: ${message}`;
         this.status.className = className;
     }
 }

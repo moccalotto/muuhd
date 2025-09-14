@@ -2,12 +2,12 @@ import WebSocket, { WebSocketServer } from "ws";
 import http from "http";
 import path from "path";
 import fs from "fs";
-import * as msg from "./utils/messages.js";
 import { Session } from "./models/session.js";
 import { GameSeeder } from "./seeders/gameSeeder.js";
 import { Config } from "./config.js";
 import { gGame } from "./models/globals.js";
 import { AuthenticationScene } from "./scenes/authentication/authenticationScene.js";
+import { MessageType, WebsocketMessage, formatMessage } from "./utils/messages.js";
 
 //  __  __ _   _ ____    ____
 // |  \/  | | | |  _ \  / ___|  ___ _ ____   _____ _ __
@@ -32,7 +32,7 @@ class MudServer {
         console.info("New connection established");
         const session = new Session(websocket, gGame);
         if (Config.dev) {
-            websocket.send(msg.prepareToSend(msg.SYSTEM, "dev", true));
+            websocket.send(formatMessage(MessageType.SYSTEM, "dev", true));
         }
 
         //   ____ _     ___  ____  _____
@@ -56,7 +56,7 @@ class MudServer {
                 this.onMessage(session, data);
             } catch (error) {
                 console.error(error, data.toString(), data);
-                websocket.send(msg.prepareToSend(msg.CALAMITY, error));
+                websocket.send(formatMessage(MessageType.CALAMITY, error));
                 session.close();
             }
         });
@@ -159,7 +159,7 @@ class MudServer {
             return;
         }
 
-        const msgObj = new msg.WebsocketMessage(data.toString());
+        const msgObj = new WebsocketMessage(data.toString());
 
         //
         // Handle replies to prompts. The main workhorse of the game.
@@ -174,7 +174,7 @@ class MudServer {
         }
 
         //
-        // Handle QUIT messages. When the player types :quit
+        // Handle MessageType.QUIT messages. When the player types :quit
         if (msgObj.isQuit()) {
             session.scene.onQuit();
             session.close(0, "Closing the socket, graceful goodbye!");
@@ -184,7 +184,7 @@ class MudServer {
         //
         // Handle any text that starts with ":"  that isn't :help or :quit
         if (msgObj.isColon()) {
-            return session.scene.prompt.onColon(msgObj.command, msgObj.argLine);
+            return session.scene.prompt.onColon(msgObj.command, msgObj.args);
         }
 
         //

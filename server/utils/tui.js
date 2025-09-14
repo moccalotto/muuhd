@@ -222,7 +222,7 @@ export function frameText(text, options) {
   let output = "";
 
   //
-  // GENERATE THE MARGIN SPACE ABOVE THE FRAMED TEXT
+  // GENERATE THE MARGIN SPACE ABOVE THE FRAMED MsgType.TEXT
   //
   //  ( we insert space characters even though  )
   //  ( they wouldn't normally be visible. But  )
@@ -263,7 +263,7 @@ export function frameText(text, options) {
   ).repeat(options.vPadding);
 
   //
-  // GENERATE FRAMED TEXT SEGMENT
+  // GENERATE FRAMED MsgType.TEXT SEGMENT
   //
   //    ║ My pretty ║
   //    ║ text here ║
@@ -318,7 +318,7 @@ export function frameText(text, options) {
     "\n";
 
   //
-  // GENERATE THE MARGIN SPACE BELOW THE FRAMED TEXT
+  // GENERATE THE MARGIN SPACE BELOW THE FRAMED MsgType.TEXT
   //
   //  ( we insert space characters even though  )
   //  ( they wouldn't normally be visible. But  )

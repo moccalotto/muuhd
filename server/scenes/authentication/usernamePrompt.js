@@ -1,11 +1,16 @@
 import { Player } from "../../models/player.js";
 import { Prompt } from "../prompt.js";
 import * as security from "../../utils/security.js";
-import { context } from "../../utils/messages.js";
 import { gGame } from "../../models/globals.js";
 import { PlayerCreationScene } from "../playerCreation/playerCreationSene.js";
 import { Config } from "../../config.js";
+import { AuthenticationScene } from "./authenticationScene.js";
 
+/**
+ * @class
+ *
+ * @property {AuthenticationScene} scene
+ */
 export class UsernamePrompt extends Prompt {
     //
     promptText = [
@@ -24,17 +29,14 @@ export class UsernamePrompt extends Prompt {
     // Let the client know that we're asking for a username
     promptOptions = { username: true };
 
-    //
-    // User entered ":create"
-    onColon_create() {
-        // User creation scene.
-        this.scene.session.setScene(new PlayerCreationScene(this.scene));
+    /** @returns {AuthenticationScene} */
+    get scene() {
+        return this._scene;
     }
 
     //
     // User replied to our prompt
     onReply(text) {
-
         //
         // do basic syntax checks on usernames
         if (!security.isUsernameSane(text)) {

@@ -19,7 +19,7 @@ export class PlayerCreationScene extends Scene {
             this.session.calamity("Server is full, no more players can be created");
         }
 
-        this.doPrompt(new CreateUsernamePrompt(this));
+        this.showPrompt(new CreateUsernamePrompt(this));
     }
 
     /**
@@ -27,13 +27,13 @@ export class PlayerCreationScene extends Scene {
      *
      * @param {string} username
      */
-    onUsernameAccepted(username) {
+    usernameAccepted(username) {
         const player = gGame.createPlayer(username);
         this.player = player;
 
         this.session.sendSystemMessage("salt", player.salt);
         this.session.sendText(`Username _*${username}*_ is available, and I've reserved it for you :)`);
-        this.doPrompt("new passwordprompt");
+        this.showPrompt("new passwordprompt");
     }
 
     /**
@@ -42,9 +42,15 @@ export class PlayerCreationScene extends Scene {
      *
      * @param {string} password
      */
-    onPasswordAccepted(password) {
+    passwordAccepted(password) {
         this.password = password;
         this.session.sendText("*_Success_* ✅ You will now be asked to log in again, sorry for that ;)");
         this.player.setPasswordHash(security.generateHash(this.password));
+    }
+
+    //
+    // User entered ":create"
+    onColon__create() {
+        this.scene.createPlayer();
     }
 }

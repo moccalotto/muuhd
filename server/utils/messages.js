@@ -1,19 +1,6 @@
-import { mustBe, mustBeInteger, mustBeString, mustMatch } from "./mustbe.js";
+import { mustBe, mustBeString, mustMatch } from "./mustbe.js";
 
-const colonCommandRegex = /^:([a-z0-9_]+)(:?\s*(.*))?$/;
-
-/**
- * Enum-like object holding placeholder tokens.
- *
- * @readonly
- * @enum {string}
- */
-export const MsgContext = Object.freeze({
-    PASSWORD: ":password",
-    USERNAME: ":username",
-});
-
-export const MsgTtype = Object.freeze({
+export const MessageType = Object.freeze({
     /**
      * Very bad logic error. Player must quit game, refresh page, and log in again.
      *
@@ -28,7 +15,7 @@ export const MsgTtype = Object.freeze({
      *
      * Server-->Client-->Player
      */
-    MsgContext.ERROR: "E",
+    ERROR: "E",
 
     /**
      * Message to be displayed.
@@ -42,7 +29,7 @@ export const MsgTtype = Object.freeze({
      *
      * Player-->Client-->Server
      */
-    MsgContext.REPLY: "R",
+    REPLY: "R",
 
     /**
      * Player wants to quit.
@@ -93,7 +80,7 @@ export const MsgTtype = Object.freeze({
  * Represents a message sent to/from client
  *
  * @property {string?} command
- * @property {string?} argLine
+ * @property {any[]} args
  */
 export class WebsocketMessage {
     /** @protected @type {any[]} _arr The array that contains the message data */
@@ -136,22 +123,22 @@ export class WebsocketMessage {
         this.type = mustBeString(data[0]);
 
         switch (this.type) {
-            case MsgContext.REPLY: // player ==> client ==> server
+            case MessageType.REPLY: // player ==> client ==> server
                 this.text = mustBeString(data[1]);
                 break;
-            case HELP: // player ==> client ==> server
+            case MessageType.HELP: // player ==> client ==> server
                 this.text = data[1] === undefined ? "" : mustBeString(data[1]).trim();
                 break;
-            case COLON: // player ==> client ==> server
+            case MessageType.COLON: // player ==> client ==> server
                 this.command = mustMatch(data[1], /^[a-z0-9_]+$/);
-                this.argLine = data[2]; // parse??
+                this.args = mustBe(data[2], "any[]");
                 break;
-            case DEBUG: // server ==> client
-            case MsgContext.ERROR: // server ==> client ==> player
-            case QUIT: // player ==> client ==> server
-            case SYSTEM: // client <==> server
-            case PROMPT: // server ==> client ==> player
-            case TEXT: // server ==> client ==> player
+            case MessageType.DEBUG: // server ==> client
+            case MessageType.ERROR: // server ==> client ==> player
+            case MessageType.QUIT: // player ==> client ==> server
+            case MessageType.SYSTEM: // client <==> server
+            case MessageType.PROMPT: // server ==> client ==> player
+            case MessageType.TEXT: // server ==> client ==> player
                 break;
             default:
                 throw new Error(`Unknown message type: >>${typeof this.type}<<`);
@@ -159,27 +146,27 @@ export class WebsocketMessage {
     }
 
     isQuit() {
-        return this.type === QUIT;
+        return this.type === MessageType.QUIT;
     }
 
     isHelp() {
-        return this.type === HELP;
+        return this.type === MessageType.HELP;
     }
 
     isColon() {
-        return this.type === COLON;
+        return this.type === MessageType.COLON;
     }
 
     isReply() {
-        return this.type === MsgContext.REPLY;
+        return this.type === MessageType.REPLY;
     }
 
     isSysMessage() {
-        return this.type === SYSTEM;
+        return this.type === MessageType.SYSTEM;
     }
 
     isDebug() {
-        return this.type === DEBUG;
+        return this.type === MessageType.DEBUG;
     }
 }
 
@@ -189,6 +176,6 @@ export class WebsocketMessage {
  * @param {string} messageType
  * @param {...any} args
  */
-export function prepareToSend(messageType, ...args) {
+export function formatMessage(messageType, ...args) {
     return JSON.stringify([messageType, ...args]);
 }
