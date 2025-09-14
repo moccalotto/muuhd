@@ -7,6 +7,7 @@
  * Serializing this object effectively saves the game.
  */
 
+import { Config } from "../config.js";
 import { isIdSane, miniUid } from "../utils/id.js";
 import { Xorshift32 } from "../utils/random.js";
 import { Character } from "./character.js";
@@ -14,6 +15,8 @@ import { ItemAttributes, ItemBlueprint } from "./item.js";
 import { Player } from "./player.js";
 
 export class Game {
+    _counter = 1_000_000;
+
     /** @type {Map<string,ItemBlueprint>} List of all item blueprints in the game */
     _itemBlueprints = new Map();
 
@@ -34,22 +37,21 @@ export class Game {
      */
     _players = new Map();
 
-
     /** @protected @type {Xorshift32} */
-    _rng;
+    _random;
 
     /** @type {Xorshift32} */
-    get rng() {
-        return this._rng;
+    get random() {
+        return this._random;
     }
 
     /** @param {number} rngSeed Seed number used for randomization */
-    constructor(rngSeed) {
-        if (!Number.isInteger(rngSeed)) {
-            throw new Error("rngSeed must be an integer");
-        }
+    constructor() {
+        this.rngSeed = Date.now();
+    }
 
-        this._rng = new Xorshift32(rngSeed);
+    set rngSeed(rngSeed) {
+        this._random = new Xorshift32(rngSeed);
     }
 
     getPlayer(username) {
@@ -90,7 +92,6 @@ export class Game {
      * @returns {ItemBlueprint|false}
      */
     addItemBlueprint(blueprintId, attributes) {
-        console.log(attributes);
         if (typeof blueprintId !== "string" || !blueprintId) {
             throw new Error("Invalid blueprintId!");
         }

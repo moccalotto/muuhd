@@ -10,58 +10,61 @@
 // | |_) | (_| | |  \__ \  __/ |
 // | .__/ \__,_|_|  |___/\___|_|
 // |_|
+
+const capture = "([a-zA-Z0-9:()-](?:.*[a-zA-Z0-9:()-])?)";
+const skipSpace = "\\s*";
+
+const htmlEscapeRegex = /[&<>"'`]/g; // used to escape html characters
+
+/**
+ * @type {Array.string[]}
+ *
+ * The order of the elements of this array matters.
+ */
+const opcodes = [
+    ["(^|\\n)=", "($|\\n)", "$1<h1>$2</h1>$3"],
+    ["(^|\\n)==", "($|\\n)", "$1<h2>$2</h2>$3"],
+    ["---", "---", "<span class='strike'>$1</span>"],
+    ["___", "___", "<span class='underline'>$1</span>"],
+    ["(?:[.]{3})", "(?:[.]{3})", "<span class='undercurl'>$1</span>"],
+    ["(?:[(]{2})", "(?:[)]{2})", "<span class='faint'>$1</span>"],
+    ["_", "_", "<span class='italic'>$1</span>"],
+    ["\\*", "\\*", "<span class='bold'>$1</span>"],
+    ["\\[\\[([a-zA-Z0-9_ ]+)\\[\\[", "\\]\\]", "<span class='$1'>$2</span>"],
+];
+/** @type{Array.Array.<Regexp,string>} */
+const regexes = [];
+
+for (const [left, right, replacement] of opcodes) {
+    regexes.push([new RegExp(left + skipSpace + capture + skipSpace + right, "g"), replacement]);
+}
+
+/** @param {string} text */
 export function crackdown(text) {
-  console.debug("starting crack parsing");
-  console.debug(text);
-  return text
-    .replace(/[&<>"'`]/g, (c) => {
-      switch (c) {
-        case "&":
-          return "&amp;";
-        case "<":
-          return "&lt;";
-        case ">":
-          return "&gt;";
-        case '"':
-          return "&quot;";
-        case "'":
-          return "&#039;";
-        case "`":
-          return "&#096;";
-        default:
-          return c;
-      }
-    })
-    .replace(
-      /---(([a-zA-Z0-9:].*?[a-zA-Z0-9:])|[a-zA-Z0-9:])---/g,
-      '<span class="strike">$1</span>',
-    ) // line-through
-    .replace(
-      /___(([a-zA-Z0-9:].*?[a-zA-Z0-9:])|[a-zA-Z0-9:])___/g,
-      '<span class="underline">$1</span>',
-    ) // underline
-    .replace(
-      /_(([a-zA-Z0-9:].*?[a-zA-Z0-9:])|[a-zA-Z0-9:])_/g,
-      '<span class="italic">$1</span>',
-    ) // italic
-    .replace(
-      /\*(([a-zA-Z0-9:].*?[a-zA-Z0-9:])|[a-zA-Z0-9:])\*/g,
-      '<span class="bold">$1</span>',
-    ) // bold
-    .replace(
-      /\.{3}(([a-zA-Z0-9:].*?[a-zA-Z0-9:])|[a-zA-Z0-9:])\.{3}/g,
-      '<span class="undercurl">$1</span>',
-    ) // undercurl
-    .replace(
-      /\({3}(([a-zA-Z0-9:].*?[a-zA-Z0-9:])|[a-zA-Z0-9:])\){3}/g,
-      '<span class="faint">($1)</span>',
-    ) // faint with parentheses
-    .replace(
-      /\({2}(([a-zA-Z0-9:].*?[a-zA-Z0-9:])|[a-zA-Z0-9:])\){2}/g,
-      '<span class="faint">$1</span>',
-    ); // faint with parentheses
+    text.replace(htmlEscapeRegex, (c) => {
+        switch (c) {
+            case "&":
+                return "&amp;";
+            case "<":
+                return "&lt;";
+            case ">":
+                return "&gt;";
+            case '"':
+                return "&quot;";
+            case "'":
+                return "&#039;";
+            case "`":
+                return "&#096;";
+            default:
+                return c;
+        }
+    });
+    for (const k in regexes) {
+        const [regex, replacement] = regexes[k];
+        text = text.replace(regex, replacement);
+    }
 
-  console.debug("crack output", text);
+    console.debug("crack output", text);
 
-  return text;
+    return text;
 }

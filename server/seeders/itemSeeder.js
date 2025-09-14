@@ -1,5 +1,5 @@
-import { Game } from "../models/game.js";
 import { ItemBlueprint } from "../models/item.js";
+import { gGame } from "../models/globals.js";
 
 //
 //  ___ _                   _____                    _       _
@@ -11,11 +11,6 @@ import { ItemBlueprint } from "../models/item.js";
 //
 // Seed the Game.ItemBlueprint store
 export class ItemSeeder {
-    /** @param {Game} game */
-    constructor(game) {
-        this.game = game;
-    }
-
     seed() {
         //
         // __        __
@@ -25,7 +20,7 @@ export class ItemSeeder {
         //    \_/\_/ \___|\__,_| .__/ \___/|_| |_|___/
         //                     |_|
         //-------------------------------------------------------
-        this.game.addItemBlueprint(":weapon.light.dagger", {
+        gGame.addItemBlueprint(":weapon.light.dagger", {
             name: "Dagger",
             description: "Small shady blady",
             itemSlots: 0.5,
@@ -35,7 +30,7 @@ export class ItemSeeder {
             specialEffect: ":effect.weapon.fast",
         });
 
-        this.game.addItemBlueprint(":weapon.light.sickle", {
+        gGame.addItemBlueprint(":weapon.light.sickle", {
             name: "Sickle",
             description: "For cutting nuts, and branches",
             itemSlots: 1,
@@ -43,7 +38,7 @@ export class ItemSeeder {
             specialEffect: ":effect.weapon.sickle",
         });
 
-        this.game.addItemBlueprint(":weapon.weird.spiked_gauntlets", {
+        gGame.addItemBlueprint(":weapon.weird.spiked_gauntlets", {
             name: "Spiked Gauntlets",
             description: "Spikes with gauntlets on them!",
             itemSlots: 1,
@@ -51,7 +46,7 @@ export class ItemSeeder {
             specialEffect: "TBD",
         });
 
-        this.game.addItemBlueprint(":weapon.light.rapier", {
+        gGame.addItemBlueprint(":weapon.light.rapier", {
             name: "Rapier",
             description: "Fancy musketeer sword",
             itemSlots: 1,
@@ -66,22 +61,20 @@ export class ItemSeeder {
         //  / ___ \| |  | | | | | | (_) | |  \__ \
         // /_/   \_\_|  |_| |_| |_|\___/|_|  |___/
         // ---------------------------------------
-        this.game.addItemBlueprint(":armor.light.studded_leather", {
+        gGame.addItemBlueprint(":armor.light.studded_leather", {
             name: "Studded Leather Armor",
             description: "Padded and hardened leather with metal stud reinforcement",
             itemSlots: 3,
             specialEffect: "TBD",
             armorHitPoints: 10,
         });
-        this.game.addItemBlueprint(":armor.light.leather", {
+        gGame.addItemBlueprint(":armor.light.leather", {
             name: "Leather Armor",
             description: "Padded and hardened leather",
             itemSlots: 2,
             specialEffect: "TBD",
             armorHitPoints: 6,
         });
-
-        console.log(this.game._itemBlueprints);
 
         //
         //  _  ___ _
@@ -90,7 +83,7 @@ export class ItemSeeder {
         // | . \| | |_\__ \
         // |_|\_\_|\__|___/
         // -------------------
-        this.game.addItemBlueprint(":kit.poisoners_kit", {
+        gGame.addItemBlueprint(":kit.poisoners_kit", {
             name: "Poisoner's Kit",
             description: "Allows you to create poisons that can be applied to weapons",
             itemSlots: 2,
@@ -99,7 +92,7 @@ export class ItemSeeder {
             maxCount: 20,
         });
 
-        this.game.addItemBlueprint(":kit.healers_kit", {
+        gGame.addItemBlueprint(":kit.healers_kit", {
             name: "Healer's Kit",
             description: "Allows you to heal your teammates outside of combat",
             itemSlots: 2,

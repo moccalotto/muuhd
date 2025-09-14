@@ -1,136 +1,150 @@
 @import url("https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap");
 
 body {
-  font-family: "Fira Code", monospace;
-  font-optical-sizing: auto;
-  font-size: 14px;
-  background-color: #1a1a1a;
-  color: #00ff00;
-  margin: 0;
-  padding: 0;
-  height: 100vh;
-  width: 100vw;
+    font-family: "Fira Code", monospace;
+    font-optical-sizing: auto;
+    font-size: 14px;
+    background-color: #1a1a1a;
+    color: #00ff00;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
 
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 #container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  max-width: 99.9vw;
-  margin: 0 auto;
-  padding: 10px;
-  overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 99.9vw;
+    margin: 0 auto;
+    padding: 10px;
+    overflow: hidden;
 }
 
 #output {
-  flex: 1;
-  background-color: #000;
-  border: 2px solid #333;
-  padding: 15px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  line-height: 1.4;
-  margin-bottom: 20px;
-  font-family: "Fira Code", monospace;
-  font-optical-sizing: auto;
-  font-size: 14px;
-  width: 100ch;
+    flex: 1;
+    background-color: #000;
+    border: 2px solid #333;
+    padding: 15px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    line-height: 1.4;
+    margin-bottom: 20px;
+    font-family: "Fira Code", monospace;
+    font-optical-sizing: auto;
+    font-size: 14px;
+    width: 100ch;
 }
 
 #input-container {
-  display: flex;
-  gap: 10px;
+    display: flex;
+    gap: 10px;
 }
 
 #input {
-  flex: 1;
-  background-color: #222;
-  border: 2px solid #333;
-  color: #00ff00;
-  padding: 10px;
-  font-family: "Fira Code", monospace;
-  font-optical-sizing: auto;
-  font-size: 14px;
+    flex: 1;
+    background-color: #222;
+    border: 2px solid #333;
+    color: #00ff00;
+    padding: 10px;
+    font-family: "Fira Code", monospace;
+    font-optical-sizing: auto;
+    font-size: 14px;
 }
 
 #input:focus {
-  outline: none;
-  border-color: #00ff00;
+    outline: none;
+    border-color: #00ff00;
 }
 
 #send {
-  background-color: #333;
-  border: 2px solid #555;
-  color: #00ff00;
-  padding: 10px 20px;
-  font-family: "Fira Code", monospace;
-  font-optical-sizing: auto;
-  cursor: pointer;
+    background-color: #333;
+    border: 2px solid #555;
+    color: #00ff00;
+    padding: 10px 20px;
+    font-family: "Fira Code", monospace;
+    font-optical-sizing: auto;
+    cursor: pointer;
 }
 
 #send:hover {
-  background-color: #444;
+    background-color: #444;
 }
 
 #status {
-  background-color: #333;
-  padding: 5px 15px;
-  margin-bottom: 10px;
-  border-radius: 3px;
+    background-color: #333;
+    padding: 5px 15px;
+    margin-bottom: 10px;
+    border-radius: 3px;
+}
+
+h1,
+h2 {
+    display: inline-block;
+    margin-top: 0.3em;
 }
 
 .connected {
-  color: #00ff00;
+    color: #00ff00;
 }
 
 .disconnected {
-  color: #ff4444;
+    color: #ff4444;
 }
 
 .connecting {
-  color: #ffaa00;
+    color: #ffaa00;
 }
 
 .error {
-  color: #ff4444;
+    color: #ff4444;
 }
 
 .input {
-  color: #666;
+    color: #666;
 }
 
 .debug {
-  opacity: 0.33;
+    opacity: 0.33;
 }
 
 .prompt {
-  color: #00ccff;
+    color: #00ccff;
 }
 
 .bold {
-  font-weight: bold;
+    font-weight: bold;
 }
 
 .italic {
-  font-style: italic;
+    font-style: italic;
 }
 
 .strike {
-  text-decoration: line-through;
+    text-decoration: line-through;
 }
 
 .underline {
-  text-decoration: underline;
+    text-decoration: underline;
 }
 
 .undercurl {
-  text-decoration: wavy underline lime;
+    text-decoration: wavy underline rgb(00 100% 00 / 40%);
 }
 
 .faint {
-  opacity: 0.42;
+    opacity: 0.42;
+}
+
+.fBlue {
+    color: blue;
+}
+
+.bRed {
+    background-color: red;
 }

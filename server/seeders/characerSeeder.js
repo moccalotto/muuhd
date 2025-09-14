@@ -10,16 +10,29 @@
 // |____/ \___|\___|\__,_|\___|_|
 // ------------------------------------------------
 import { Character } from "../models/character.js";
-import { Game } from "../models/game.js";
+import { gGame } from "../models/globals.js";
 import { Player } from "../models/player.js";
-import * as roll from "../utils/dice.js";
 import { isIdSane } from "../utils/id.js";
 
+// stupid convenience hack that only works if we only have a single Game in the system.
+// Which we easily could have.!!
+let roll = {};
+
 export class CharacterSeeder {
-    /** @type {Game} */
-    constructor(game) {
-        /** @type {Game} */
-        this.game = game;
+    constructor() {
+        // stupid convenience hack that only works if we only have a single Game in the system.
+        // Which we easily could have.!!
+        roll = {
+            d: (max, min = 1) => {
+                return gGame.random.within(min, max);
+            },
+            d6: () => {
+                return gGame.random.within(1, 6);
+            },
+            d8: () => {
+                return gGame.random.within(1, 8);
+            },
+        };
     }
 
     /**
@@ -36,7 +49,7 @@ export class CharacterSeeder {
      */
     addItemsToCharacter(character, ...itemBlueprintIds) {
         for (const id of itemBlueprintIds) {
-            const blueprint = this.game.getItemBlueprint(id);
+            const blueprint = gGame.getItemBlueprint(id);
             if (!blueprint) {
                 throw new Error(`No blueprint found for id: ${id}`);
             }
@@ -74,9 +87,9 @@ export class CharacterSeeder {
         // Rolling skills
 
         c.name =
-            this.game.rng.oneOf("sir", "madam", "mister", "miss", "", "", "") +
-            " random " +
-            this.game.rng.get().toString();
+            gGame.random.oneOf("sir ", "madam ", "mister ", "miss ", "", "", "") + // prefix
+            "random " + // name
+            gGame.random.get().toString(); // suffix
 
         c.awareness = roll.d6() + 2;
         c.grit = roll.d6() + 2;
@@ -86,7 +99,8 @@ export class CharacterSeeder {
         c.rangedCombat = roll.d6() + 2;
         c.skulduggery = roll.d6() + 2;
 
-        switch (roll.d8()) {
+        let ancestryId = roll.d8();
+        switch (ancestryId) {
             case 1:
                 c.ancestry = "human";
                 // Humans get +1 to all skills
@@ -111,7 +125,7 @@ export class CharacterSeeder {
                 c.meleeCombat = Math.max(c.grit, 10);
                 break;
             case 5:
-                c.ancestry = "Gnomish";
+                c.ancestry = "gnomish";
                 c.meleeCombat = Math.max(c.awareness, 10);
                 break;
             case 6:
@@ -127,12 +141,12 @@ export class CharacterSeeder {
                 c.meleeCombat = Math.max(c.skulduggery, 10);
                 break;
             default:
-                throw new Error("Logic error, ancestry d8() roll was out of scope");
+                throw new Error(`Logic error, ancestry d8() roll of ${ancestryId} was out of scope"`);
         }
 
         this.applyFoundation(c);
 
-        console.log(c);
+        console.debug(c);
 
         return c;
     }
@@ -163,7 +177,7 @@ export class CharacterSeeder {
     applyFoundation(c, foundation = ":random") {
         switch (foundation) {
             case ":random":
-                return this.applyFoundation(c, roll.dice(3));
+                return this.applyFoundation(c, roll.d(3));
                 break;
 
             //

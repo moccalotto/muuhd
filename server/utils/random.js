@@ -4,24 +4,44 @@
  */
 export class Xorshift32 {
     /* @type {number} */
+    initialSeed;
+
+    /**
+     * State holds a single uint32.
+     * It's useful for staying within modulo 2**32.
+     *
+     * @type {Uint32Array}
+     */
     state;
 
     /** @param {number} seed */
     constructor(seed) {
-        this.state = seed | 0;
+        if (seed === undefined) {
+            const maxInt32 = 2 ** 32;
+            seed = Math.floor(Math.random() * (maxInt32 - 1)) + 1;
+        }
+        seed = seed | 0;
+        console.info("RNG Initial Seed %d", seed);
+        this.state = Uint32Array.of(seed);
     }
 
     /** @protected Shuffle the internal state. */
     shuffle() {
-        //
-        // Run the actual xorshift32 algorithm
-        let x = this.state;
-        x ^= x << 13;
-        x ^= x >>> 17;
-        x ^= x << 5;
-        x = (x >>> 0) / 4294967296;
+        console.log("RNG Shuffle: Initial State: %d", this.state);
+        this.state[0] ^= this.state[0] << 13;
+        this.state[0] ^= this.state[0] >>> 17;
+        this.state[0] ^= this.state[0] << 5;
 
-        this.state = x;
+        // We could also do something like this:
+        // x ^= x << 13;
+        // x ^= x >> 17;
+        // x ^= x << 5;
+        // return x;
+        // But we'd have to xor the x with 2^32 after every op,
+        // we get that "for free" by using the uint32array
+
+        console.log("RNG Shuffle: Exit State: %d", this.state);
+        return this.state[0];
     }
 
     /**
@@ -77,4 +97,3 @@ export class Xorshift32 {
         return num + greaterThanOrEqual;
     }
 }
-

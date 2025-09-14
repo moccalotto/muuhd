@@ -1,0 +1,50 @@
+import { Config } from "../../config.js";
+import { gGame } from "../../models/globals.js";
+import { Scene } from "../scene.js";
+import { CreateUsernamePrompt } from "./createUsernamePrompt.js";
+
+export class PlayerCreationScene extends Scene {
+    introText = "= Create Player";
+
+    /** @protected @type {Player} */
+    player;
+
+    /** @protected @type {string} */
+    password;
+
+    onReady() {
+        //
+        // If there are too many players, stop allowing new players in.
+        if (gGame._players.size >= Config.maxPlayers) {
+            this.session.calamity("Server is full, no more players can be created");
+        }
+
+        this.doPrompt(new CreateUsernamePrompt(this));
+    }
+
+    /**
+     * Called when the player has entered a valid and available username.
+     *
+     * @param {string} username
+     */
+    onUsernameAccepted(username) {
+        const player = gGame.createPlayer(username);
+        this.player = player;
+
+        this.session.sendSystemMessage("salt", player.salt);
+        this.session.sendText(`Username _*${username}*_ is available, and I've reserved it for you :)`);
+        this.doPrompt("new passwordprompt");
+    }
+
+    /**
+     *
+     * Called when the player has entered a password and confirmed it.
+     *
+     * @param {string} password
+     */
+    onPasswordAccepted(password) {
+        this.password = password;
+        this.session.sendText("*_Success_* ✅ You will now be asked to log in again, sorry for that ;)");
+        this.player.setPasswordHash(security.generateHash(this.password));
+    }
+}

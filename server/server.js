@@ -2,12 +2,12 @@ import WebSocket, { WebSocketServer } from "ws";
 import http from "http";
 import path from "path";
 import fs from "fs";
-import { Game } from "./models/game.js";
 import * as msg from "./utils/messages.js";
 import { Session } from "./models/session.js";
-import { AuthState } from "./states/authState.js";
 import { GameSeeder } from "./seeders/gameSeeder.js";
 import { Config } from "./config.js";
+import { gGame } from "./models/globals.js";
+import { AuthenticationScene } from "./scenes/authentication/authenticationScene.js";
 
 //  __  __ _   _ ____    ____
 // |  \/  | | | |  _ \  / ___|  ___ _ ____   _____ _ __
@@ -16,15 +16,9 @@ import { Config } from "./config.js";
 // |_|  |_|\___/|____/  |____/ \___|_|    \_/ \___|_|
 // -----------------------------------------------------
 class MudServer {
-    /** @type {Xorshift32} */
-    rng;
-
-    /** @param {number?} rngSeed seed for the pseudo-random number generator. */
-    constructor(rngSeed = undefined) {
-        /** @type {Game} */
-        this.game = new GameSeeder().createGame(rngSeed || Date.now());
+    constructor() {
+        new GameSeeder().seed();
     }
-
     //   ____ ___  _   _ _   _ _____ ____ _____ _____ ____
     //  / ___/ _ \| \ | | \ | | ____/ ___|_   _| ____|  _ \
     // | |  | | | |  \| |  \| |  _|| |     | | |  _| | | | |
@@ -35,9 +29,11 @@ class MudServer {
     //------------------------------
     /** @param {WebSocket} websocket */
     onConnectionEstabished(websocket) {
-        console.log("New connection established");
-        const session = new Session(websocket, this.game);
-        session.sendSystemMessage("dev", true);
+        console.info("New connection established");
+        const session = new Session(websocket, gGame);
+        if (Config.dev) {
+            websocket.send(msg.prepareToSend(msg.SYSTEM, "dev", true));
+        }
 
         //   ____ _     ___  ____  _____
         //  / ___| |   / _ \/ ___|| ____|
@@ -48,75 +44,36 @@ class MudServer {
         // Handle Socket Closing
         //----------------------
         websocket.on("close", () => {
-            if (!session.player) {
-                console.info("A player without a session disconnected");
-                return;
+            try {
+                this.close(session);
+            } catch (e) {
+                console.error("Failed during closing of websocket");
             }
-            //-------------
-            // TODO
-            //-------------
-            // Handle player logout (move the or hide their characters)
-            //
-            // Maybe session.onConnectionClosed() that calls session._state.onConnectionClosed()
-            // Maybe this.setState(new ConnectionClosedState());
-            // Maybe both ??
-            console.log(`Player ${session.player.username} disconnected`);
         });
 
-        //  __  __ _____ ____ ____    _    ____ _____
-        // |  \/  | ____/ ___/ ___|  / \  / ___| ____|
-        // | |\/| |  _| \___ \___ \ / _ \| |  _|  _|
-        // | |  | | |___ ___) |__) / ___ \ |_| | |___
-        // |_|  |_|_____|____/____/_/   \_\____|_____|
-        //--------------------------------------------
-        // HANDLE INCOMING MESSAGES
-        //-------------------------
         websocket.on("message", (data) => {
             try {
-                console.debug("incoming websocket message %s", data);
-
-                if (!session.state) {
-                    console.error("we received a message, but don't even have a state. Zark!");
-                    websocket.send(msg.prepare(msg.ERROR, "Oh no! I don't know what to do!?"));
-                    return;
-                }
-
-                const msgObj = new msg.ClientMessage(data.toString());
-
-                if (msgObj.isQuitCommand()) {
-                    //---------------------
-                    // TODO TODO TODO TODO
-                    //---------------------
-                    // Set state = QuitState
-                    //
-                    websocket.send(msg.prepare(msg.MESSAGE, "The quitting quitter quits... Typical. Cya!"));
-                    websocket.close();
-                    return;
-                }
-
-                if (typeof session.state.onMessage !== "function") {
-                    console.error("we received a message, but we're not i a State to receive it");
-                    websocket.send(msg.prepare(msg.ERROR, "Oh no! I don't know what to do with that message."));
-                    return;
-                }
-                session.state.onMessage(msgObj);
+                this.onMessage(session, data);
             } catch (error) {
-                console.trace("received an invalid message (error: %s)", error, data.toString(), data);
-                websocket.send(msg.prepare(msg.CALAMITY, error));
+                console.error(error, data.toString(), data);
+                websocket.send(msg.prepareToSend(msg.CALAMITY, error));
+                session.close();
             }
         });
 
-        session.setState(new AuthState(session));
+        session.setScene(new AuthenticationScene(session));
     }
 
-    //  ____ _____  _    ____ _____
-    // / ___|_   _|/ \  |  _ \_   _|
-    // \___ \ | | / _ \ | |_) || |
-    //  ___) || |/ ___ \|  _ < | |
-    // |____/ |_/_/   \_\_| \_\|_|
-    //-----------------------------
-    // Start the server
-    //-----------------
+    //  _   _ _____ _____ ____      ____ _____  _    ____ _____
+    // | | | |_   _|_   _|  _ \    / ___|_   _|/ \  |  _ \_   _|
+    // | |_| | | |   | | | |_) |___\___ \ | | / _ \ | |_) || |
+    // |  _  | | |   | | |  __/_____|__) || |/ ___ \|  _ < | |
+    // |_| |_| |_|   |_| |_|       |____/ |_/_/   \_\_| \_\|_|
+    //----------------------------------------------------------
+    //
+    //                   Start the server
+    //
+    //----------------------------------------------------------
     start() {
         //
         // The file types we allow to be served.
@@ -136,10 +93,11 @@ class MudServer {
             //
             // Check if the requested file has a legal file type.
             if (!contentType) {
+                //
                 // Invalid file, pretend it did not exist!
                 res.writeHead(404);
                 res.end(`File not found`);
-                console.log("Bad http request", req.url);
+                console.warn("Bad http request", req.url);
                 return;
             }
 
@@ -149,7 +107,7 @@ class MudServer {
                 if (err) {
                     res.writeHead(404);
                     res.end(`File not found`);
-                    console.log("Bad http request", req.url);
+                    console.warn("Bad http request", req.url);
                     return;
                 }
                 res.writeHead(200, { "Content-Type": contentType });
@@ -165,11 +123,101 @@ class MudServer {
             this.onConnectionEstabished(ws);
         });
 
-        console.info(`running environment: ${Config.env}`);
+        console.info(`Environment: ${Config.env}`);
         httpServer.listen(Config.port, () => {
-            console.log(`NUUHD server running on port ${Config.port}`);
-            console.log(`WebSocket server ready for connections`);
+            console.info(`NUUHD server running on port ${Config.port}`);
         });
+    }
+
+    //  __  __ _____ ____ ____    _    ____ _____
+    // |  \/  | ____/ ___/ ___|  / \  / ___| ____|
+    // | |\/| |  _| \___ \___ \ / _ \| |  _|  _|
+    // | |  | | |___ ___) |__) / ___ \ |_| | |___
+    // |_|  |_|_____|____/____/_/   \_\____|_____|
+    //--------------------------------------------
+    /**
+     * Handle incoming message
+     * @param {Session} session
+     * @param {WebSocket.RawData} data
+     */
+    onMessage(session, data) {
+        //
+        // Check if message too big
+        if (data.byteLength > Config.maxIncomingMessageSize) {
+            console.error("Message was too big!", Config.maxIncomingMessageSize, data.byteLength);
+            session.calamity(254, "batman");
+            return;
+        }
+
+        console.debug("Incoming websocket message %s", data);
+
+        //
+        // Sanity check. Do we even have a scene to route the message to?
+        if (!session.scene) {
+            console.error("No scene!", data.toString());
+            session.calamity("We received a message, but we're not in a state to handle it. Zark!");
+            return;
+        }
+
+        const msgObj = new msg.WebsocketMessage(data.toString());
+
+        //
+        // Handle replies to prompts. The main workhorse of the game.
+        if (msgObj.isReply()) {
+            return session.scene.prompt.onReply(msgObj.text);
+        }
+
+        //
+        // Handle :help commands
+        if (msgObj.isHelp()) {
+            return session.scene.prompt.onHelp(msgObj.text);
+        }
+
+        //
+        // Handle QUIT messages. When the player types :quit
+        if (msgObj.isQuit()) {
+            session.scene.onQuit();
+            session.close(0, "Closing the socket, graceful goodbye!");
+            return;
+        }
+
+        //
+        // Handle any text that starts with ":"  that isn't :help or :quit
+        if (msgObj.isColon()) {
+            return session.scene.prompt.onColon(msgObj.command, msgObj.argLine);
+        }
+
+        //
+        // Handle system messages
+        if (msgObj.isSysMessage()) {
+            console.log("SYS message", msgObj);
+            return;
+        }
+
+        //
+        // Handle debug messages
+        if (msgObj.isDebug()) {
+            console.log("DBG message", msgObj);
+            return;
+        }
+
+        //
+        // How did we end up down here?
+        console.warn("Unknown message type: >>%s<<", msgObj.type, msgObj);
+    }
+
+    //   ____ _     ___  ____  _____
+    //  / ___| |   / _ \/ ___|| ____|
+    // | |   | |  | | | \___ \|  _|
+    // | |___| |__| |_| |___) | |___
+    //  \____|_____\___/|____/|_____|
+    //-------------------------------
+    // Handle Socket Closing
+    //----------------------
+    close(session) {
+        const playerName = session.player ? session.player.username : "[unauthenticated]";
+        console.info(playerName + " disconnected");
+        session.close();
     }
 }
 
@@ -177,7 +225,7 @@ class MudServer {
 // |  \/  |  / \  |_ _| \ | |
 // | |\/| | / _ \  | ||  \| |
 // | |  | |/ ___ \ | || |\  |
-// |_|  |_/_/   \_\___|_| \_| A
+// |_|  |_/_/   \_\___|_| \_|
 //---------------------------
 // Code entry point
 //-----------------
