@@ -1,3 +1,4 @@
+import { sprintf } from "sprintf-js";
 import { Session } from "../models/session.js";
 import { Prompt } from "./prompt.js";
 

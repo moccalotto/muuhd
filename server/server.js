@@ -81,6 +81,7 @@ class MudServer {
             ".css": "text/css",
             ".html": "text/html",
             ".ico": "image/x-icon",
+            ".map": "application/json",
             ".js": "application/javascript",
             ".json": "application/json",
             ".png": "image/png",

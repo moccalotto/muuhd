@@ -5,7 +5,7 @@
  * @returns {(string|number)[]} Command arguments
  */
 export function parseArgs(cmdString) {
-    if (typeof cmdString === "string") {
+    if (typeof cmdString !== "string") {
         throw new Error("Expected string. GoT a finger in the eye instead");
     }
     const args = [];

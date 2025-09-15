@@ -1,6 +1,8 @@
 import { crackdown } from "../utils/crackdown.js";
 import { parseArgs } from "../utils/parseArgs.js";
 import { MessageType } from "../utils/messages.js";
+import { sprintf } from "sprintf-js";
+import { Config } from "../config.js";
 
 /** Regex to validate if a :help [topic] command i entered correctly */
 const helpRegex = /^:help(?:\s+(.*))?$/;
@@ -72,7 +74,10 @@ class MUDClient {
 
     connect() {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const wsUrl = `${protocol}//${window.location.host}`;
+
+        const wsUrl = `${protocol}//${window.location.host}`.replace(/:\d+$/, Config.port);
+
+        console.log(window.location);
 
         this.updateStatus("Connecting...", "connecting");
 

@@ -26,20 +26,20 @@ body {
     overflow: hidden;
 }
 
-/* #output { */
-/*     flex: 1; */
-/*     background-color: #000; */
-/*     border: 2px solid #333; */
-/*     padding: 15px; */
-/*     overflow-y: auto; */
-/*     white-space: pre-wrap; */
-/*     line-height: 1.4; */
-/*     margin-bottom: 20px; */
-/*     font-family: "Fira Code", monospace; */
-/*     font-optical-sizing: auto; */
-/*     font-size: 14px; */
-/*     width: 100ch; */
-/* } */
+#output {
+    flex: 1;
+    background-color: #000;
+    border: 2px solid #333;
+    padding: 15px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    line-height: 1.4;
+    margin-bottom: 20px;
+    font-family: "Fira Code", monospace;
+    font-optical-sizing: auto;
+    font-size: 14px;
+    width: 100ch;
+}
 
 #input-container {
     display: flex;
