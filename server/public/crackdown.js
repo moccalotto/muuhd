@@ -11,7 +11,7 @@
 // | .__/ \__,_|_|  |___/\___|_|
 // |_|
 
-const capture = "([a-zA-Z0-9:()-](?:.*[a-zA-Z0-9:()-])?)";
+const capture = "([a-z0-9:()-](?:.*[a-zA-Z:().!-])?)";
 const skipSpace = "\\s*";
 
 const htmlEscapeRegex = /[&<>"'`]/g; // used to escape html characters
@@ -26,7 +26,7 @@ const opcodes = [
     ["(^|\\n)==", "($|\\n)", "$1<h2>$2</h2>$3"],
     ["---", "---", "<span class='strike'>$1</span>"],
     ["___", "___", "<span class='underline'>$1</span>"],
-    ["(?:[.]{3})", "(?:[.]{3})", "<span class='undercurl'>$1</span>"],
+    ["(?:[,]{3})", "(?:[,]{3})", "<span class='undercurl'>$1</span>"],
     ["(?:[(]{2})", "(?:[)]{2})", "<span class='faint'>$1</span>"],
     ["_", "_", "<span class='italic'>$1</span>"],
     ["\\*", "\\*", "<span class='bold'>$1</span>"],
@@ -35,8 +35,10 @@ const opcodes = [
 /** @type{Array.Array.<Regexp,string>} */
 const regexes = [];
 
+//
+// Pre-compile all regexes
 for (const [left, right, replacement] of opcodes) {
-    regexes.push([new RegExp(left + skipSpace + capture + skipSpace + right, "g"), replacement]);
+    regexes.push([new RegExp(left + skipSpace + capture + skipSpace + right, "gi"), replacement]);
 }
 
 /** @param {string} text */

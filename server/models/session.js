@@ -117,7 +117,7 @@ export class Session {
     }
 
     /** @param {string|string[]} errorMessage */
-    sendError(errorMessage, options = { verbatim: true }) {
+    sendError(errorMessage, options = { verbatim: true, error: true }) {
         this.send(MessageType.ERROR, mustBeString(errorMessage), options);
     }
 
@@ -128,7 +128,8 @@ export class Session {
     calamity(errorMessage) {
         //
         // The client should know not to format calamaties anyway, but we add “preformatted” anyway
-        this.send(MessageType.CALAMITY, errorMessage, { preformatted: true });
+        console.info("CALAMITY", errorMessage);
+        this.send(MessageType.CALAMITY, errorMessage, { verbatim: true, calamity: true });
         this.close();
     }
 

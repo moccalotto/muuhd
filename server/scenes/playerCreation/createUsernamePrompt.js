@@ -8,7 +8,7 @@ export class CreateUsernamePrompt extends Prompt {
     //
     promptText = [
         "Enter your username", //
-        "((type *:help* for more info))" // 
+        "((type *:help* for more info))", //
     ];
 
     //
@@ -25,27 +25,31 @@ export class CreateUsernamePrompt extends Prompt {
     // Let the client know that we're asking for a username
     promptOptions = { username: true };
 
-    onReply(text) {
+    /**
+     * @returns {PlayerCreationScene}
+     */
+    get scene() {
+        return this._scene;
+    }
+
+    onReply(username) {
         //
         // do basic syntax checks on usernames
-        if (!security.isUsernameSane(text)) {
-
-            console.info("Someone entered insane username: '%s'", text);
-            this.sendError(
-                "Incorrect username, try again.",
-            );
+        if (!security.isUsernameSane(username)) {
+            console.info("Someone entered insane username: '%s'", username);
+            this.sendError("Incorrect username, try again.");
             this.execute();
             return;
         }
 
         //
         // try and fetch the player object from the game
-        const player = gGame.getPlayer(text);
+        const player = gGame.getPlayer(username);
 
         //
         // handle invalid username
         if (player) {
-            console.info("Someone tried to create a user with an occupied username: '%s'", text);
+            console.info("Someone tried to create a user with an occupied username: '%s'", username);
             this.sendError("Occupied, try something else");
             this.execute();
             return;
@@ -53,6 +57,6 @@ export class CreateUsernamePrompt extends Prompt {
 
         //
         // Tell daddy that we're done
-        this.scene.onUsernameAccepted(player);
+        this.scene.usernameAccepted(username);
     }
 }

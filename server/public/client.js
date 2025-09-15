@@ -40,7 +40,7 @@ class MUDClient {
         this.digest = "SHA-256";
 
         /** @type {string} Salt string to use for client-side password hashing */
-        this.salt = "No salt, no shorts, no service";
+        this.salt = "no_salt_no shorts_no_service";
 
         /** @type {string} Number of times the hashing should be done */
         this.rounds = 1000;
@@ -182,7 +182,7 @@ class MUDClient {
         // The quit command has its own message type
         if (inputText === ":quit") {
             this.send(MessageType.QUIT);
-            this.writeToOutput("> " + inputText, { verbatim: true, class: "input" });
+            this.echo(inputText);
             return;
         }
 
@@ -199,7 +199,7 @@ class MUDClient {
         if (help) {
             console.log("here");
             help[1] ? this.send(MshType.HELP, help[1].trim()) : this.send(MshType.HELP);
-            this.writeToOutput("> " + inputText, { verbatim: true, class: "input" });
+            this.echo(inputText);
             return;
         }
 
@@ -213,7 +213,7 @@ class MUDClient {
         if (colon) {
             const args = typeof colon[2] === "string" ? parseArgs(colon[2]) : [];
             this.send(MessageType.COLON, colon[1], args);
-            this.writeToOutput("> " + inputText, { verbatim: true, class: "input colon" });
+            this.echo(inputText);
             return;
         }
 
@@ -235,7 +235,11 @@ class MUDClient {
 
         // The server wants a password, let's hash it before sending it.
         if (this.promptOptions.password) {
-            inputText = await this.hashPassword(inputText);
+            const pwHash = await this.hashPassword(inputText);
+            this.send(MessageType.REPLY, pwHash);
+            this.shouldReply = false;
+            this.promptOptions = {};
+            return;
         }
 
         //
@@ -251,7 +255,7 @@ class MUDClient {
         //
         // We add our own command to the output stream so the
         // player can see what they typed.
-        this.writeToOutput("> " + inputText, { verbatim: true, class: "input" });
+        this.echo(inputText);
         return;
     }
 
@@ -411,6 +415,10 @@ class MUDClient {
         return;
     }
 
+    echo(text) {
+        this.writeToOutput(text, { verbatim: true, echo: true });
+    }
+
     /**
      * Add output to the text.
      * @param {string} text
@@ -428,6 +436,12 @@ class MUDClient {
                 element.className = "verbatim";
             } else {
                 element.innerHTML = crackdown(line);
+            }
+
+            for (const cls of ["calamity", "error", "debug", "prompt", "echo"]) {
+                if (options[cls]) {
+                    element.classList.add(cls);
+                }
             }
 
             this.output.appendChild(element);

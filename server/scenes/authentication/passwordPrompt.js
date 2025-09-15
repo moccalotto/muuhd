@@ -1,6 +1,7 @@
 import { Prompt } from "../prompt.js";
 import * as security from "../../utils/security.js";
 import { Config } from "../../config.js";
+import { AuthenticationScene } from "./authenticationScene.js";
 
 export class PasswordPrompt extends Prompt {
     //
@@ -13,6 +14,11 @@ export class PasswordPrompt extends Prompt {
 
     get player() {
         return this.scene.player;
+    }
+
+    /** @returns {AuthenticationScene} */
+    get scene() {
+        return this._scene;
     }
 
     onReply(text) {
@@ -70,10 +76,8 @@ export class PasswordPrompt extends Prompt {
             return;
         }
 
-        this.scene.passwordAccepted();
-
-        //
         // Password was correct, go to main game
-        this.session.setState(new JustLoggedInState(this.session));
+        // this.scene.passwordAccepted();
+        this.scene.passwordAccepted();
     }
 }

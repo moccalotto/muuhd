@@ -79,7 +79,7 @@ export class Scene {
         //
         // Default: we have no handler for the Foo command
         if (property === undefined) {
-            this.session.sendError(`You cannot ${command.toUpperCase()} right now`, { verbatim: true }); // :foo ==> you cannot FOO right now
+            this.session.sendError(`You cannot ${command.toUpperCase()} right now`); // :foo ==> you cannot FOO right now
             return;
         }
 

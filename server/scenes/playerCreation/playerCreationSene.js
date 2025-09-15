@@ -33,7 +33,9 @@ export class PlayerCreationScene extends Scene {
 
         this.session.sendSystemMessage("salt", player.salt);
         this.session.sendText(`Username _*${username}*_ is available, and I've reserved it for you :)`);
-        this.showPrompt("new passwordprompt");
+
+        //
+        this.session.sendError("TODO: create a createPasswordPrompt and display it.");
     }
 
     /**
@@ -46,11 +48,5 @@ export class PlayerCreationScene extends Scene {
         this.password = password;
         this.session.sendText("*_Success_* ✅ You will now be asked to log in again, sorry for that ;)");
         this.player.setPasswordHash(security.generateHash(this.password));
-    }
-
-    //
-    // User entered ":create"
-    onColon__create() {
-        this.scene.createPlayer();
     }
 }

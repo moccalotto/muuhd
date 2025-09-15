@@ -78,9 +78,12 @@ class MudServer {
         //
         // The file types we allow to be served.
         const contentTypes = {
-            ".js": "application/javascript",
             ".css": "text/css",
             ".html": "text/html",
+            ".ico": "image/x-icon",
+            ".js": "application/javascript",
+            ".json": "application/json",
+            ".png": "image/png",
         };
 
         //
@@ -145,7 +148,7 @@ class MudServer {
         // Check if message too big
         if (data.byteLength > Config.maxIncomingMessageSize) {
             console.error("Message was too big!", Config.maxIncomingMessageSize, data.byteLength);
-            session.calamity(254, "batman");
+            session.calamity("batman");
             return;
         }
 

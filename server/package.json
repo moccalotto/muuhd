@@ -5,8 +5,11 @@
     "main": "server.js",
     "type": "module",
     "scripts": {
-        "start": "MUUHD_ENV=prod node server.js",
-        "dev": "MUUHD_ENV=dev nodemon server.js"
+        "server:start": "MUUHD_ENV=prod node server.js",
+        "server:dev": "MUUHD_ENV=dev nodemon server.js",
+        "frontend:build": "vite build frontend",
+        "frontend:dev": "vite frontend"
+        "dev": "concurrently \"npm run server:dev\" \"npm run frontend:dev\"",
     },
     "keywords": [
         "mud",
@@ -22,6 +25,7 @@
         "ws": "^8.14.2"
     },
     "devDependencies": {
+        "concurrently": "^9.2.1",
         "nodemon": "^3.0.1",
         "prettier": "3.6.2"
     },

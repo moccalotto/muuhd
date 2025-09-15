@@ -101,12 +101,22 @@ h2 {
     color: #ffaa00;
 }
 
+/*
+*/
 .error {
     color: #ff4444;
 }
 
-.input {
-    color: #666;
+.calamity {
+    color: #f00;
+    text-decoration: wavy underline rgb(100 0% 00 / 40%);
+}
+
+.echo {
+    color: #888;
+}
+.echo::before {
+    content: "> ";
 }
 
 .debug {
@@ -114,7 +124,7 @@ h2 {
 }
 
 .prompt {
-    color: #00ccff;
+    color: #aaa;
 }
 
 .bold {
@@ -139,12 +149,5 @@ h2 {
 
 .faint {
     opacity: 0.42;
-}
-
-.fBlue {
-    color: blue;
-}
-
-.bRed {
-    background-color: red;
+    color: #44f;
 }

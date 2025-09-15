@@ -2,7 +2,6 @@ import { Player } from "../../models/player.js";
 import { Prompt } from "../prompt.js";
 import * as security from "../../utils/security.js";
 import { gGame } from "../../models/globals.js";
-import { PlayerCreationScene } from "../playerCreation/playerCreationSene.js";
 import { Config } from "../../config.js";
 import { AuthenticationScene } from "./authenticationScene.js";
 
