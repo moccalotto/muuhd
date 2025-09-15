@@ -1,6 +1,6 @@
-import { crackdown } from "./crackdown.js";
-import { parseArgs } from "./parseArgs.js";
-import { MessageType } from "./messages.js";
+import { crackdown } from "../utils/crackdown.js";
+import { parseArgs } from "../utils/parseArgs.js";
+import { MessageType } from "../utils/messages.js";
 
 /** Regex to validate if a :help [topic] command i entered correctly */
 const helpRegex = /^:help(?:\s+(.*))?$/;
