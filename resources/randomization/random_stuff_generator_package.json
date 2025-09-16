@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "fantasy-name-generator": "^2.0.0",
+    "fantasy-names": "^2.0.1",
+    "yet-another-name-generator": "^1.2.0"
+  }
+}
