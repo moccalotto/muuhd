@@ -83,12 +83,19 @@ Each group chat has a name.
 - `Donjons`
     - GameMode = _Crawling_: Lady Gurthie Firefoot is Crawling the Donjons of Speematoforr.
     - Played like `Knights of Pen and Paper`
+        - WebGL: Actual rendered 3d, but black and white.
+        - Texture pack is just ascii text (TEXTures).
+            - Possibly Procedurally generated
+            - Most likely like this: https://www.youtube.com/watch?v=D1jLK4TG6O4&list=LL
+        - Animations like `Stonekeep` - only showing animation when the player moves.
+        - Monsters are just outlines of monster shapes, shaded with variably-sized letters
+          that spell out the monster's name.
     - Procedurally (pre-)generated dungeons
-    - Very simple square dungeon layout (like KoPaP).
     - Every time you enter a non-explored space, you roll a die, and see what happens.
-    - Combat is like `Dark Queen of Krynn`
+    - Combat is like `Dark Queen of Krynn` (i.e. third person semi-iso)
     - 1 Location == 1 donjon room/area
     - BSP (binary space partition) https://www.youtube.com/watch?v=TlLIOgWYVpI&t=374s
+
 - `Overland`
     - GameMode = _Traveling_: Swift Dangledonk the Slow is Traveling the Marshes of Moohfaahsaah
     - Travel is like `Rogue`

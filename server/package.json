@@ -10,7 +10,7 @@
         "frontend:build": "vite build frontend",
         "frontend:dev": "vite frontend",
         "dev": "concurrently 'npm run server:dev' 'npm run frontend:dev'",
-        "dev:color": "concurrently -n 'API,UI' -c 'blue,green' 'npm run server:dev' 'npm run frontend:dev'"
+        "dev:color": "concurrently -n 'Server,Client' -c 'blue,green' 'npm run server:dev' 'npm run frontend:dev'"
     },
     "keywords": [
         "mud",
