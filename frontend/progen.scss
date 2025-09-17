@@ -1,6 +1,6 @@
 // number number of cells per side in the source picture
 $dim: 9;
-$pixSize: 80px;
+$pixSize: 40px;
 $gridSize: calc($dim * $pixSize);
 
 body {
@@ -35,21 +35,13 @@ body {
 }
 
 .pixel {
-    background-color: #ffffff;
+    background-color: #fff;
     cursor: pointer;
     border: 1px solid #7f8c8d;
     transition: transform 0.1s ease;
     position: relative;
     aspect-ratio: 1;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-
-    .subpixel {
-        width: 100%;
-        height: 100%;
-        background-color: transparent;
-    }
 }
 
 .pixel:hover {
@@ -82,14 +74,14 @@ body {
 
 .color-palette {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     gap: 4px;
     margin: 10px 0;
 }
 
 .color-swatch {
-    width: 25px;
-    height: 25px;
+    width: 28px;
+    height: 28px;
     cursor: pointer;
     border: 2px solid transparent;
     border-radius: 4px;
@@ -102,8 +94,9 @@ body {
 }
 
 .color-swatch.active {
-    border-color: #3498db;
-    transform: scale(1.1);
+    outline: 4px solid #fff;
+    border: 1px solid #000;
+    /* transform: scale(1.1); */
 }
 
 .tools {

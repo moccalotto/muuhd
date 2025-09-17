@@ -1,6 +1,12 @@
-class PaintProg {
+import { sprintf } from "sprintf-js";
+import { Xorshift32 } from "../utils/random.js";
+import { WfcGrid } from "./WfcGrid.js";
+import { TrainingCell } from "./TrainingCell.js";
+import { TrainingGrid } from "./TrainingGrid.js";
+
+class PainApp {
     /** @type {string} */
-    currentColor = "#000";
+    activeColor = "#000";
     /** @type {string} */
     currentTool = "draw";
     /** @type {boolean} */
@@ -9,7 +15,7 @@ class PaintProg {
     drawingMode = false;
 
     /**@param {string[]} pal */
-    constructor(dim, pal, gridElement, paletteElement, currentColorElement, colorPickerElement, previewElement) {
+    constructor(dim, pal, gridElement, paletteElement, previewElement) {
         /** @type {number} */
         this.dim = dim;
         /** @type {string[]} Default color palette */
@@ -22,18 +28,19 @@ class PaintProg {
         this.previewElement = previewElement;
         /** @type {HTMLElement} */
         this.paletteElement = paletteElement;
-        /** @type {HTMLElement} */
-        this.currentColorElement = currentColorElement;
         /** @type {HTMLInputElement} */
-        this.colorPickerElement = colorPickerElement;
 
-        this.subImages = Array.from({ length: this.samplePixels.length }, () => [...this.samplePixels]);
+        this.trainingImage = new TrainingGrid(
+            this.samplePixels.map(() => {
+                return new TrainingCell();
+            }),
+        );
 
         this.createGrid();
         this.createColorPalette();
         this.updatePreview();
-        this.setCurrentColor(pal[0]);
-        this.updateAllSubimages();
+        this.setActiveColor(pal[0]);
+        this.updateTrainingGrid();
     }
 
     createGrid() {
@@ -60,36 +67,26 @@ class PaintProg {
     createColorPalette() {
         this.paletteElement.innerHTML = "";
 
-        this.palette.forEach((color) => {
+        this.palette.forEach((color, paletteIndex) => {
             const swatch = document.createElement("div");
-            swatch.className = "color-swatch";
+            swatch.classList.add("color-swatch");
+            swatch.classList.add(`pal-idx-${paletteIndex}`);
+            swatch.classList.add(`pal-color-${color}`);
             swatch.style.backgroundColor = color;
-            swatch.onclick = () => this.setCurrentColor(color);
+            swatch.onclick = () => this.setActiveColor(paletteIndex);
             this.paletteElement.appendChild(swatch);
         });
     }
 
-    setCurrentColor(color) {
-        this.currentColor = color;
-        this.currentColorElement.style.backgroundColor = color;
-        this.colorPickerElement.value = color;
+    setActiveColor(paletteIndex) {
+        //
+        this.activeColor = this.palette[paletteIndex];
 
-        // Update active swatch
-        // NOTE: this was "document.querySelectorAll "
-        this.paletteElement.querySelectorAll(".color-swatch").forEach((swatch) => {
-            swatch.classList.toggle("active", swatch.style.backgroundColor === this.colorToRgb(color));
+        const colorSwatches = this.paletteElement.querySelectorAll(".color-swatch");
+        colorSwatches.forEach((swatch) => {
+            const isActive = swatch.classList.contains(`pal-idx-${paletteIndex}`);
+            swatch.classList.toggle("active", isActive);
         });
-    }
-
-    colorToRgb(hex) {
-        const r = parseInt(hex.substr(1, 2), 16);
-        const g = parseInt(hex.substr(3, 2), 16);
-        const b = parseInt(hex.substr(5, 2), 16);
-        return `rgb(${r}, ${g}, ${b})`;
-    }
-
-    openColorPicker() {
-        this.colorPickerElement.click();
     }
 
     setTool(tool) {
@@ -135,7 +132,7 @@ class PaintProg {
             return;
         }
 
-        this.updateSingleSubImage(index);
+        this.updateTrainingCell(index);
         this.updatePreview(index);
     }
 
@@ -146,10 +143,10 @@ class PaintProg {
     applyTool(index) {
         switch (this.currentTool) {
             case "draw":
-                this.setPixel(index, this.currentColor);
+                this.setPixel(index, this.activeColor);
                 break;
             case "fill":
-                this.floodFill(index, this.samplePixels[index], this.currentColor);
+                this.floodFill(index, this.samplePixels[index], this.activeColor);
                 break;
         }
     }
@@ -246,7 +243,7 @@ class PaintProg {
                 //
                 const x = i % 3;
                 const y = Math.floor(i / 3);
-                ctx.fillStyle = this.subImages[subImageIdx][i];
+                ctx.fillStyle = this.trainingImage.pixels[subImageIdx].subPixels[i];
                 ctx.fillRect(x, y, 1, 1);
             }
         }
@@ -255,28 +252,24 @@ class PaintProg {
         this.previewElement.style.backgroundSize = "100%";
     }
 
-    updateAllSubimages() {
+    updateTrainingGrid() {
         for (let i = 0; i < this.samplePixels.length; i++) {
-            this.updateSingleSubImage(i);
+            this.updateTrainingCell(i);
         }
     }
 
-    updateSingleSubImage(i) {
+    updateTrainingCell(i) {
         const dim = this.dim;
-        const len = dim ** 2;
         const x = i % dim;
         const y = Math.floor(i / dim);
 
         const colorAt = (dX, dY) => {
             const _x = (x + dim + dX) % dim; // add dim before modulo because JS modulo allows negative results
             const _y = (y + dim + dY) % dim;
-            if (y == 0 && dY < 0) {
-                console.log(_x, _y);
-            }
             return this.samplePixels[_y * dim + _x];
         };
 
-        this.subImages[i] = [
+        this.trainingImage.pixels[i] = new TrainingCell([
             //                      | neighbour
             // ---------------------|-----------
             colorAt(-1, -1), //     | northwest
@@ -290,21 +283,21 @@ class PaintProg {
             colorAt(-1, 1), //      | southwest
             colorAt(0, 1), //       | south
             colorAt(1, 1), //       | southeast
-        ];
+        ]);
     }
 
     exportAsImage() {
         const canvas = document.createElement("canvas");
-        canvas.width = 90; // 9x upscale
-        canvas.height = 90;
+        canvas.width = this.dim; // 9x upscale
+        canvas.height = this.dim;
         const ctx = canvas.getContext("2d");
         ctx.imageSmoothingEnabled = false;
 
         for (let i = 0; i < this.dim ** 2; i++) {
-            const x = (i % this.dim) * 10;
-            const y = Math.floor(i / this.dim) * 10;
+            const x = i % this.dim;
+            const y = Math.floor(i / this.dim);
             ctx.fillStyle = this.samplePixels[i];
-            ctx.fillRect(x, y, 10, 10);
+            ctx.fillRect(x, y, 1, 1);
         }
 
         const link = document.createElement("a");
@@ -341,7 +334,7 @@ class PaintProg {
                             alert("Invalid data format!");
                         }
                     } catch (error) {
-                        alert("Error reading file!");
+                        alert("Error reading file!" + error);
                     }
                 };
                 reader.readAsText(file);
@@ -350,42 +343,86 @@ class PaintProg {
         input.click();
     }
 
-    // Initialize the editor
+    waveFunction() {
+        this.updateTrainingGrid();
+        const wfcImg = new WfcGrid(
+            // this.previewElement.clientWidth,
+            // this.previewElement.clientHeight,
+            30,
+            30,
+            this.trainingImage.clone(),
+            new Xorshift32(Date.now()),
+        );
+
+        // Could not "collapse" the image.
+        // We should reset and try again?
+        let its = wfcImg.collapse();
+
+        if (its > 0) {
+            throw new Error(`Function Collapse failed with ${its} iterations left to go`);
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = wfcImg.width;
+        canvas.height = wfcImg.height;
+
+        // debug values
+        canvas.width = 30;
+        canvas.height = 30;
+        //
+        const ctx = canvas.getContext("2d");
+        let i = 0;
+        for (let y = 0; y < canvas.height; y++) {
+            for (let x = 0; x < canvas.width; x++) {
+                console.log("pix");
+                const cell = wfcImg.cells[i++];
+                if (cell.valid) {
+                    ctx.fillStyle = "magenta";
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+        }
+        this.previewElement.style.backgroundImage = `url(${canvas.toDataURL()})`;
+        this.previewElement.style.backgroundSize = "100%";
+    }
 }
-const palette = [
+const base_palette = [
     "#000",
-    "#008",
-    "#00f",
-    "#080",
-    "#088",
+    "#007",
+    "#00F",
+    "#070",
+    "#077",
+    "#0F0",
+    "#0FF",
     "#0f0",
-    "#0ff",
-    "#800",
-    "#808",
-    "#80f",
-    "#880",
-    "#888",
-    "#88f",
-    "#8f8",
-    "#8ff",
-    "#ccc",
-    "#f00",
-    "#f0f",
-    "#f80",
-    "#f88",
-    "#f8f",
-    "#ff0",
-    "#ff8",
-    "#fff",
+    "#700",
+    "#707",
+    "#770",
+    "#F00",
+    "#F0F",
+    "#FF0",
 ];
 
-window.painter = new PaintProg(
+const palette = new Array(base_palette.length * 2);
+
+base_palette.forEach((color, idx) => {
+    //
+    // Calc inverted color
+    const invR = 15 - Number.parseInt(color.substr(1, 1), 16);
+    const invG = 15 - Number.parseInt(color.substr(2, 1), 16);
+    const invB = 15 - Number.parseInt(color.substr(3, 1), 16);
+    const invColor = sprintf("#%x%x%x", invR, invG, invB);
+
+    // populate the palette
+    palette[idx] = color;
+    palette[7 * 4 - 1 - idx] = invColor;
+});
+
+window.painter = new PainApp(
     9,
     palette,
     document.getElementById("gridContainer"), //
     document.getElementById("colorPalette"), //
-    document.getElementById("currentColor"), //
-    document.getElementById("colorPicker"), //
     document.getElementById("preview"), //
 );
 

@@ -21,13 +21,11 @@ export class Xorshift32 {
             seed = Math.floor(Math.random() * (maxInt32 - 1)) + 1;
         }
         seed = seed | 0;
-        console.info("RNG Initial Seed %d", seed);
         this.state = Uint32Array.of(seed);
     }
 
     /** @protected Shuffle the internal state. */
     shuffle() {
-        console.log("RNG Shuffle: Initial State: %d", this.state);
         this.state[0] ^= this.state[0] << 13;
         this.state[0] ^= this.state[0] >>> 17;
         this.state[0] ^= this.state[0] << 5;
@@ -39,9 +37,6 @@ export class Xorshift32 {
         // return x;
         // But we'd have to xor the x with 2^32 after every op,
         // we get that "for free" by using the uint32array
-
-        console.log("RNG Shuffle: Exit State: %d", this.state);
-        return this.state[0];
     }
 
     /**
@@ -50,7 +45,7 @@ export class Xorshift32 {
      */
     get() {
         this.shuffle();
-        return this.state;
+        return this.state[0];
     }
 
     /** @param {number} x @returns {number} a positive integer lower than x */
@@ -58,15 +53,15 @@ export class Xorshift32 {
         return this.get() % x;
     }
 
-    /** @param {number} x @reurns {number} a positive integer lower than or equal to x */
+    /** @param {number} x @returns {number} a positive integer lower than or equal to x */
     lowerThanOrEqual(x) {
         return this.get() % (x + 1);
     }
 
     /**
-     * @param {<T>[]} arr
-     *
-     * @return {<T>}
+     * @template T
+     * @param {T[]} arr - The array to pick from.
+     * @returns {T} One element from the array.   * @return {<T>}
      */
     randomElement(arr) {
         const idx = this.lowerThan(arr.length);
@@ -75,7 +70,7 @@ export class Xorshift32 {
     }
 
     /**
-     * @param {...<T>} args
+     * @param {...<T>} ... pick random function argument
      * @returns {<T>}
      */
     oneOf(...args) {
@@ -97,3 +92,6 @@ export class Xorshift32 {
         return num + greaterThanOrEqual;
     }
 }
+
+const rng = new Xorshift32();
+console.log(rng.get());

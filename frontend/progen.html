@@ -17,16 +17,6 @@
 
         <div class="controls-panel">
             <div class="color-picker-section">
-                <h3>Current Color</h3>
-                <div class="current-color" id="currentColor" onclick="painter.openColorPicker()"></div>
-                <input
-                    type="color"
-                    id="colorPicker"
-                    value="#000000"
-                    onchange="setCurrentColor(this.value)"
-                    style="display: none"
-                />
-
                 <h3>Color Palette</h3>
                 <div class="color-palette" id="colorPalette">
                     <!-- Color swatches will be generated -->
@@ -53,6 +43,7 @@
                 <button onclick="painter.exportAsImage()">Export png</button>
                 <button onclick="painter.exportAsData()">Export json</button>
                 <button onclick="painter.importData()">Import json</button>
+                <button onclick="painter.waveFunction()">WaifuCollapse</button>
             </div>
         </div>
 
