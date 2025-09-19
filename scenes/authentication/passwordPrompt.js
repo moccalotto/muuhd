@@ -38,7 +38,7 @@ export class PasswordPrompt extends Prompt {
         //
         // Block users who enter bad passwords too many times.
         if (this.player.failedPasswordsSinceLastLogin > Config.maxFailedLogins) {
-            this.blockedUntil = Date.now() + Config.accountLockoutSeconds;
+            this.blockedUntil = Date.now() + Config.accountLockoutSeconds * 1000;
             this.calamity("You have been locked out for too many failed password attempts, come back later");
             return;
         }
@@ -49,7 +49,7 @@ export class PasswordPrompt extends Prompt {
         if (this.player.blockedUntil > Date.now()) {
             //
             // Try to re-login too soon, and your lockout lasts longer.
-            this.blockedUntil += Config.accountLockoutSeconds;
+            this.blockedUntil += Config.accountLockoutSeconds * 1000;
             this.calamity("You have been locked out for too many failed password attempts, come back later");
             return;
         }

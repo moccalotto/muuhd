@@ -64,6 +64,9 @@ export class Xorshift32 {
      * @returns {T} One element from the array.   * @return {<T>}
      */
     randomElement(arr) {
+        if (arr instanceof Set) {
+            arr = [...arr];
+        }
         const idx = this.lowerThan(arr.length);
 
         return arr[idx];

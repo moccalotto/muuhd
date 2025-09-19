@@ -1,4 +1,4 @@
-import { TrainingCell } from "./TrainingCell";
+import { SourceCell } from "./SourceCell";
 
 /**
  * Represents a single cell in a WfcGrid
@@ -9,7 +9,7 @@ export class WfcCell {
      * @param {number} i index in the cell-array of this cell
      * @param {number} x x-coordinate of cell
      * @param {number} y y-coordinate of cell
-     * @param {TrainingCell[]} options - A list of training cells that could potentially live here.
+     * @param {SourceCell[]} options - A list of source cells that could potentially live here.
      */
     constructor(i, x, y, options) {
         if (!options.length) {
@@ -17,7 +17,7 @@ export class WfcCell {
             throw Error("Bad >>options<< arg in WfcCell constructor. Must not be empty.", options);
         }
 
-        if (!(options[0] instanceof TrainingCell)) {
+        if (!(options[0] instanceof SourceCell)) {
             console.log("Bad >>options<< arg in WfcCell constructor. Must be array of WfcCells, but wasn't.", options);
             throw Error("Bad >>options<< arg in WfcCell constructor. Must be array of WfcCells, but wasn't.", options);
         }
@@ -29,22 +29,14 @@ export class WfcCell {
     }
 
     getEntropy() {
-        const result = this.options.length;
-        return result;
+        return this.options.length;
     }
 
     get lockedIn() {
-        return this.getEntropy() === 1;
-    }
-
-    get valid() {
-        return this.options.length > 0;
+        return this.options.length === 1;
     }
 
     get value() {
-        if (this.options[0] === undefined) {
-            throw new Error("Bad! I do not have any options, and therefore no color");
-        }
-        return this.options[0].value;
+        return this.options.length === 1 ? this.options[0].value : 0;
     }
 }

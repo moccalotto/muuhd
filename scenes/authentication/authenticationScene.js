@@ -30,13 +30,8 @@ export class AuthenticationScene extends Scene {
         this.session.player = this.player;
 
         this.session.sendText(["= Success!", "((but I don't know what to do now...))"]);
-        return;
 
-        if (this.player.admin) {
-            this.session.setScene("new AdminJustLoggedInScene");
-        } else {
-            this.session.setScene("new JustLoggedInScene");
-        }
+        this.session.setScene("new JustLoggedInScene");
     }
 
     /**

@@ -7,7 +7,6 @@
  * Serializing this object effectively saves the game.
  */
 
-import { Config } from "../config.js";
 import { isIdSane, miniUid } from "../utils/id.js";
 import { Xorshift32 } from "../utils/random.js";
 import { Character } from "./character.js";

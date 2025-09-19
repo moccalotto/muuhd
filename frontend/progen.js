@@ -1,18 +1,17 @@
 import { sprintf } from "sprintf-js";
 import { Xorshift32 } from "../utils/random.js";
 import { WfcGrid } from "./WfcGrid.js";
-import { TrainingCell } from "./TrainingCell.js";
-import { TrainingGrid } from "./TrainingGrid.js";
+import { SourceCell } from "./SourceCell.js";
+import { SourceGrid } from "./SourceGrid.js";
 
-class PainApp {
-    /** @type {string} */
-    activeColor = "#000";
-    /** @type {string} */
-    currentTool = "draw";
+class PainterApp {
+    /** @type {number} The index of the color we're currently painting with */
+    toolPaletteIndex = 0;
+
+    /** @type {string} Mode. Draw or fill */
+    mode = "draw";
     /** @type {boolean} */
     isDrawing = false;
-    /** @type {boolean} */
-    drawingMode = false;
 
     /**@param {string[]} pal */
     constructor(dim, pal, gridElement, paletteElement, previewElement) {
@@ -20,67 +19,65 @@ class PainApp {
         this.dim = dim;
         /** @type {string[]} Default color palette */
         this.palette = pal;
-        /** @type {string[]} */
-        this.samplePixels = new Array(dim ** 2).fill(pal[pal.length - 1]);
         /** @type {HTMLElement} */
         this.gridElement = gridElement;
         /** @type {HTMLElement} */
         this.previewElement = previewElement;
         /** @type {HTMLElement} */
         this.paletteElement = paletteElement;
-        /** @type {HTMLInputElement} */
 
-        this.trainingImage = new TrainingGrid(
-            this.samplePixels.map(() => {
-                return new TrainingCell();
-            }),
-        );
-
-        this.createGrid();
-        this.createColorPalette();
-        this.updatePreview();
-        this.setActiveColor(pal[0]);
-        this.updateTrainingGrid();
+        this.reset();
     }
 
-    createGrid() {
+    reset() {
+        // Assume the "background" color is always the last color in the palette.
+        const fillWith = 0;
+        this.sourceGrid = new SourceGrid(
+            Array(this.dim ** 2)
+                .fill(null)
+                .map(() => new SourceCell(new Uint8Array(9).fill(fillWith))),
+        );
+
+        this.createGridHtmlElements();
+        this.createPaletteSwatch();
+        this.updatePreview();
+        this.setToolPaletteIndex(1);
+        this.updateSourceGrid();
+    }
+
+    createGridHtmlElements() {
         this.gridElement.innerHTML = "";
 
         for (let i = 0; i < this.dim ** 2; i++) {
             const pixel = document.createElement("div");
-            pixel.className = "pixel";
-            pixel.setAttribute("data-index", i);
-            pixel.style.backgroundColor = this.samplePixels[i];
+            pixel.className = `pal-idx-${this.getCell(i)}`;
+            pixel.setAttribute("id", "cell-idx-" + i);
 
-            pixel.addEventListener("mousedown", (e) => this.startDrawing(e, i));
-            pixel.addEventListener("mouseenter", (e) => this.continueDrawing(e, i));
-            pixel.addEventListener("mouseup", () => this.stopDrawing());
+            pixel.addEventListener("mousedown", (e) => this.mouseDown(e, i));
 
             this.gridElement.appendChild(pixel);
         }
 
         // Prevent context menu and handle mouse events
         this.gridElement.addEventListener("contextmenu", (e) => e.preventDefault());
-        document.addEventListener("mouseup", () => this.stopDrawing());
     }
 
-    createColorPalette() {
+    createPaletteSwatch() {
         this.paletteElement.innerHTML = "";
 
         this.palette.forEach((color, paletteIndex) => {
             const swatch = document.createElement("div");
             swatch.classList.add("color-swatch");
             swatch.classList.add(`pal-idx-${paletteIndex}`);
-            swatch.classList.add(`pal-color-${color}`);
             swatch.style.backgroundColor = color;
-            swatch.onclick = () => this.setActiveColor(paletteIndex);
+            swatch.onclick = () => this.setToolPaletteIndex(paletteIndex);
             this.paletteElement.appendChild(swatch);
         });
     }
 
-    setActiveColor(paletteIndex) {
+    setToolPaletteIndex(paletteIndex) {
         //
-        this.activeColor = this.palette[paletteIndex];
+        this.toolPaletteIndex = paletteIndex;
 
         const colorSwatches = this.paletteElement.querySelectorAll(".color-swatch");
         colorSwatches.forEach((swatch) => {
@@ -90,7 +87,7 @@ class PainApp {
     }
 
     setTool(tool) {
-        this.currentTool = tool;
+        this.mode = tool;
         document.querySelectorAll(".tools button").forEach((btn) => btn.classList.remove("active"));
         document.getElementById(tool + "Btn").classList.add("active");
 
@@ -105,71 +102,56 @@ class PainApp {
         }
     }
 
-    toggleDrawingMode() {
-        this.drawingMode = !this.drawingMode;
-        const btn = document.getElementById("drawModeBtn");
-        if (this.drawingMode) {
-            btn.textContent = "Drawing Mode: ON";
-            btn.classList.add("drawing-mode");
-            document.getElementById("status").textContent = "Drawing mode ON - Click and drag to paint";
-        } else {
-            btn.textContent = "Drawing Mode: OFF";
-            btn.classList.remove("drawing-mode");
-            document.getElementById("status").textContent = "Drawing mode OFF - Click individual pixels";
-        }
-    }
-
-    startDrawing(e, index) {
+    mouseDown(e, index) {
         e.preventDefault();
-        this.isDrawing = true;
         this.applyTool(index);
     }
 
-    /** @param {MouseEvent} e */
-    continueDrawing(e, index) {
-        if (this.isDrawing && this.drawingMode) {
-            this.applyTool(index);
-            return;
+    getCell(idx, y = undefined) {
+        if (y === undefined) {
+            return this.sourceGrid.cells[idx].value;
         }
 
-        this.updateTrainingCell(index);
-        this.updatePreview(index);
-    }
-
-    stopDrawing() {
-        this.isDrawing = false;
+        // Treat idx as an x-coordinate, and calculate an index
+        return this.sourceGrid.cells[y * this.dim + idx].value;
     }
 
     applyTool(index) {
-        switch (this.currentTool) {
+        switch (this.mode) {
             case "draw":
-                this.setPixel(index, this.activeColor);
+                this.setPixel(index, this.toolPaletteIndex);
                 break;
             case "fill":
-                this.floodFill(index, this.samplePixels[index], this.activeColor);
+                this.floodFill(index, this.toolPaletteIndex);
                 break;
         }
     }
 
-    setPixel(index, color) {
-        this.samplePixels[index] = color;
-        const pixel = document.querySelector(`[data-index="${index}"]`);
-        pixel.style.backgroundColor = color;
+    setPixel(cellIdx, palIdx) {
+        const pixEl = document.getElementById("cell-idx-" + cellIdx);
+        this.sourceGrid.cells[cellIdx].value = palIdx;
+        pixEl.className = "pal-idx-" + palIdx;
+        this.updateSourceCell(cellIdx);
         this.updatePreview();
     }
 
-    floodFill(startIndex, targetColor, fillColor) {
-        if (targetColor === fillColor) return;
+    floodFill(startIndex, fillColorPalIdx) {
+        const targetPalIdx = this.getCell(startIndex);
+
+        if (targetPalIdx === fillColorPalIdx) {
+            return;
+        }
 
         const stack = [startIndex];
         const visited = new Set();
 
         while (stack.length > 0) {
             const index = stack.pop();
-            if (visited.has(index) || this.samplePixels[index] !== targetColor) continue;
+
+            if (visited.has(index) || this.getCell(index) !== targetPalIdx) continue;
 
             visited.add(index);
-            this.setPixel(index, fillColor);
+            this.setPixel(index, fillColorPalIdx);
 
             // Add neighbors
             const row = Math.floor(index / this.dim);
@@ -182,113 +164,80 @@ class PainApp {
         }
     }
 
-    clearCanvas() {
-        this.samplePixels.fill("#fff");
-        this.createGrid();
-        this.updatePreview();
-    }
-
     randomFill() {
         for (let i = 0; i < this.dim ** 2; i++) {
-            const randomColor = this.palette[Math.floor(Math.random() * this.palette.length)];
-            this.setPixel(i, randomColor);
+            this.setPixel(i, Math.floor(Math.random() * this.palette.length));
         }
     }
 
     invertColors() {
         for (let i = 0; i < this.dim ** 2; i++) {
-            const color = this.samplePixels[i];
-            const r = 15 - parseInt(color.substr(1, 1), 16);
-            const g = 15 - parseInt(color.substr(2, 1), 16);
-            const b = 15 - parseInt(color.substr(3, 1), 16);
-            const inverted =
-                "#" +
-                r.toString(16) + // red
-                g.toString(16) + // green
-                b.toString(16); // blue
+            const cell = this.getCell(i);
+
+            const inverted = cell % 2 === 0 ? cell + 1 : cell - 1;
 
             this.setPixel(i, inverted);
-
-            if (i % 10 === 0) {
-                console.log("invertion", {
-                    color,
-                    r,
-                    g,
-                    b,
-                    inverted,
-                });
-            }
         }
+        this.setToolPaletteIndex(
+            this.toolPaletteIndex % 2 === 0 ? this.toolPaletteIndex + 1 : this.toolPaletteIndex - 1,
+        );
     }
 
-    updatePreview(subImageIdx = undefined) {
+    updatePreview() {
         const canvas = document.createElement("canvas");
-        if (subImageIdx === undefined) {
-            canvas.width = this.dim;
-            canvas.height = this.dim;
-            const ctx = canvas.getContext("2d");
+        canvas.width = this.dim;
+        canvas.height = this.dim;
+        const ctx = canvas.getContext("2d");
 
-            for (let i = 0; i < this.dim ** 2; i++) {
-                const x = i % this.dim;
-                const y = Math.floor(i / this.dim);
-                ctx.fillStyle = this.samplePixels[i];
-                ctx.fillRect(x, y, 1, 1);
-            }
-        } else {
-            canvas.width = 3;
-            canvas.height = 3;
-            const ctx = canvas.getContext("2d");
-
-            for (let i = 0; i < 3 * 3; i++) {
-                //
-                const x = i % 3;
-                const y = Math.floor(i / 3);
-                ctx.fillStyle = this.trainingImage.pixels[subImageIdx].subPixels[i];
-                ctx.fillRect(x, y, 1, 1);
-            }
+        for (let i = 0; i < this.dim ** 2; i++) {
+            const x = i % this.dim;
+            const y = Math.floor(i / this.dim);
+            ctx.fillStyle = this.palette[this.getCell(i)];
+            ctx.fillRect(x, y, 1, 1);
         }
-
         this.previewElement.style.backgroundImage = `url(${canvas.toDataURL()})`;
         this.previewElement.style.backgroundSize = "100%";
+        return;
     }
 
-    updateTrainingGrid() {
-        for (let i = 0; i < this.samplePixels.length; i++) {
-            this.updateTrainingCell(i);
+    updateSourceGrid() {
+        for (let i = 0; i < this.dim ** 2; i++) {
+            this.updateSourceCell(i);
         }
     }
 
-    updateTrainingCell(i) {
+    /** @param {number} i */
+    updateSourceCell(idx) {
         const dim = this.dim;
-        const x = i % dim;
-        const y = Math.floor(i / dim);
+        const x = idx % dim;
+        const y = Math.floor(idx / dim);
 
-        const colorAt = (dX, dY) => {
+        const valueAt = (dX, dY) => {
             const _x = (x + dim + dX) % dim; // add dim before modulo because JS modulo allows negative results
             const _y = (y + dim + dY) % dim;
-            return this.samplePixels[_y * dim + _x];
+            return this.getCell(_y * dim + _x);
         };
 
-        this.trainingImage.pixels[i] = new TrainingCell([
+        this.sourceGrid.cells[idx].values = new Uint8Array([
             //                      | neighbour
             // ---------------------|-----------
-            colorAt(-1, -1), //     | northwest
-            colorAt(0, -1), //      | north
-            colorAt(1, -1), //      | northeast
+            valueAt(-1, -1), //     | northwest
+            valueAt(0, -1), //      | north
+            valueAt(1, -1), //      | northeast
 
-            colorAt(-1, 0), //      | east
-            this.samplePixels[i], //| -- self --
-            colorAt(1, 0), //       | west
+            valueAt(-1, 0), //      | east
+            this.getCell(idx), //   | -- self --
+            valueAt(1, 0), //       | west
 
-            colorAt(-1, 1), //      | southwest
-            colorAt(0, 1), //       | south
-            colorAt(1, 1), //       | southeast
+            valueAt(-1, 1), //      | southwest
+            valueAt(0, 1), //       | south
+            valueAt(1, 1), //       | southeast
         ]);
     }
 
     exportAsImage() {
         const canvas = document.createElement("canvas");
-        canvas.width = this.dim; // 9x upscale
+        canvas.width = this.dim;
         canvas.height = this.dim;
         const ctx = canvas.getContext("2d");
         ctx.imageSmoothingEnabled = false;
@@ -296,7 +245,7 @@ class PainApp {
         for (let i = 0; i < this.dim ** 2; i++) {
             const x = i % this.dim;
             const y = Math.floor(i / this.dim);
-            ctx.fillStyle = this.samplePixels[i];
+            ctx.fillStyle = this.palette[this.getCell(i)];
             ctx.fillRect(x, y, 1, 1);
         }
 
@@ -307,7 +256,7 @@ class PainApp {
     }
 
     exportAsData() {
-        const data = JSON.stringify(this.samplePixels);
+        const data = Array.from({ length: this.dim ** 2 }, (_, i) => this.getCell(i));
         const blob = new Blob([data], { type: "application/json" });
         const link = document.createElement("a");
         link.download = "pixel-art-data.json";
@@ -326,13 +275,15 @@ class PainApp {
                 reader.onload = (event) => {
                     try {
                         const data = JSON.parse(event.target.result);
-                        if (Array.isArray(data) && data.length === this.dim ** 2) {
-                            this.samplePixels = data;
-                            this.createGrid();
-                            this.updatePreview();
-                        } else {
+                        if (!Array.isArray(data) && data.length === this.dim ** 2) {
                             alert("Invalid data format!");
                         }
+                        data.forEach((v, k) => {
+                            this.setPixel(k, v);
+                        });
+                        this.createGridHtmlElements();
+                        this.updatePreview();
+                        this.updateSourceGrid();
                     } catch (error) {
                         alert("Error reading file!" + error);
                     }
@@ -344,50 +295,50 @@ class PainApp {
     }
 
     waveFunction() {
-        this.updateTrainingGrid();
+        this.updateSourceGrid();
         const wfcImg = new WfcGrid(
             // this.previewElement.clientWidth,
             // this.previewElement.clientHeight,
-            30,
-            30,
-            this.trainingImage.clone(),
+            10,
+            10,
+            this.sourceGrid.clone(),
             new Xorshift32(Date.now()),
         );
 
         // Could not "collapse" the image.
         // We should reset and try again?
-        let its = wfcImg.collapse();
+        let running = true;
+        let count = 0;
+        const maxCount = 1000;
 
-        if (its > 0) {
-            throw new Error(`Function Collapse failed with ${its} iterations left to go`);
-        }
+        const collapseFunc = () => {
+            running = wfcImg.collapse();
 
-        const canvas = document.createElement("canvas");
-        canvas.width = wfcImg.width;
-        canvas.height = wfcImg.height;
+            const canvas = document.createElement("canvas");
+            canvas.width = wfcImg.width;
+            canvas.height = wfcImg.height;
 
-        // debug values
-        canvas.width = 30;
-        canvas.height = 30;
-        //
-        const ctx = canvas.getContext("2d");
-        let i = 0;
-        for (let y = 0; y < canvas.height; y++) {
-            for (let x = 0; x < canvas.width; x++) {
-                console.log("pix");
-                const cell = wfcImg.cells[i++];
-                if (cell.valid) {
-                    ctx.fillStyle = "magenta";
+            const ctx = canvas.getContext("2d");
+            let i = 0;
+            for (let y = 0; y < canvas.height; y++) {
+                for (let x = 0; x < canvas.width; x++) {
+                    const cell = wfcImg.cells[i++];
+                    ctx.fillStyle = cell.value;
                     ctx.fillRect(x, y, 1, 1);
                 }
             }
-        }
-        this.previewElement.style.backgroundImage = `url(${canvas.toDataURL()})`;
-        this.previewElement.style.backgroundSize = "100%";
+            this.previewElement.style.backgroundImage = `url(${canvas.toDataURL()})`;
+            this.previewElement.style.backgroundSize = "100%";
+
+            if (running && ++count < maxCount) {
+                setTimeout(collapseFunc, 1);
+            }
+        };
+        collapseFunc();
     }
 }
 const base_palette = [
-    "#000",
+    "#FFF",
     "#007",
     "#00F",
     "#070",
@@ -403,9 +354,9 @@ const base_palette = [
     "#FF0",
 ];
 
-const palette = new Array(base_palette.length * 2);
+const palette = new Array();
 
-base_palette.forEach((color, idx) => {
+base_palette.forEach((color) => {
     //
     // Calc inverted color
     const invR = 15 - Number.parseInt(color.substr(1, 1), 16);
@@ -414,11 +365,11 @@ base_palette.forEach((color, idx) => {
     const invColor = sprintf("#%x%x%x", invR, invG, invB);
 
     // populate the palette
-    palette[idx] = color;
-    palette[7 * 4 - 1 - idx] = invColor;
+    palette.push(color);
+    palette.push(invColor);
 });
 
-window.painter = new PainApp(
+window.painter = new PainterApp(
     9,
     palette,
     document.getElementById("gridContainer"), //
@@ -426,5 +377,33 @@ window.painter = new PainApp(
     document.getElementById("preview"), //
 );
 
-// share window.dim with the HTML and CSS
+//   ____ ____ ____
+//  / ___/ ___/ ___|
+// | |   \___ \___ \
+// | |___ ___) |__) |
+//  \____|____/____/
+//--------------------
+
+//
+// share the dimensions of the SourceGrid with CSS/HTML
 document.getElementsByTagName("body")[0].style.setProperty("--dim", window.painter.dim);
+
+//
+// --------------------------------------
+// Add the palette colors as CSS classes
+// --------------------------------------
+
+const styleElement = document.createElement("style");
+styleElement.type = "text/css";
+
+let cssRules = "";
+palette.forEach((color, index) => {
+    const className = `pal-idx-${index}`;
+    cssRules += `.${className} { background-color: ${color} !important; }\n`;
+});
+
+// Add the CSS to the style element
+styleElement.innerHTML = cssRules;
+
+// Append to head
+document.head.appendChild(styleElement);

@@ -28,11 +28,10 @@
                     <h3>Tools</h3>
                     <button id="drawBtn" class="active" onclick="painter.setTool('draw')">Draw</button>
                     <button id="fillBtn" onclick="painter.setTool('fill')">Fill</button>
-                    <button onclick="painter.toggleDrawingMode()" id="drawModeBtn">Toggle Drawing Mode</button>
                 </div>
 
                 <div class="tool-group">
-                    <button onclick="painter.clearCanvas()">Clear All</button>
+                    <button onclick="painter.reset()">Reset</button>
                     <button onclick="painter.randomFill()">Random Fill</button>
                     <button onclick="painter.invertColors()">Invert</button>
                 </div>

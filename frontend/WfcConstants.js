@@ -1,0 +1,21 @@
+export const Direction = Object.freeze({
+    NW: 0,
+    N: 1,
+    NE: 2,
+    E: 3,
+    C: 4,
+    W: 5,
+    SW: 6,
+    S: 7,
+    SE: 8,
+
+    0: "North west",
+    1: "North",
+    2: "North east",
+    3: "East",
+    4: "[center]",
+    5: "West",
+    6: "South west",
+    7: "South",
+    8: "South east",
+});

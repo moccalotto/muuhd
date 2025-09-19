@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>ASCII Dungeon Crawler</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 20px;
+                background-color: #000;
+                color: #ccc;
+                font-family: "Courier New", monospace;
+                overflow: hidden;
+            }
+
+            #gameContainer {
+                text-align: center;
+            }
+
+            #viewport {
+                font-size: 8px;
+                line-height: 8px;
+                white-space: pre;
+                border: 2px solid #0f0;
+                display: inline-block;
+                background-color: #000;
+                padding: 10px;
+                overflor: ignore;
+            }
+
+            #controls {
+                margin-top: 20px;
+                color: #0f0;
+            }
+
+            #mapInput {
+                margin-top: 20px;
+            }
+
+            textarea {
+                background-color: #001100;
+                color: #ccc;
+                border: 1px solid #0f0;
+                font-family: "Courier New", monospace;
+                padding: 10px;
+            }
+
+            button {
+                background-color: #001100;
+                color: #0f0;
+                border: 1px solid #0f0;
+                padding: 5px 10px;
+                font-family: "Courier New", monospace;
+                cursor: pointer;
+            }
+
+            button:hover {
+                background-color: #002200;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="gameContainer">
+            <div id="viewport"></div>
+            <div id="controls">
+                <div>Use WASD or Arrow Keys to move and arrow keys to turn</div>
+            </div>
+            <div id="mapInput">
+                <div>Load your map (# = walls, space = floor):</div>
+                <br />
+                <textarea id="mapText" rows="10" cols="50">
+####################
+#       #          #
+#       #     ###  #
+#       #       #  #
+#       ####    #  #
+#          #       #
+#       #  #       #
+#  #    ####    #  #
+#  #            #  #
+#  ###        ###  #
+#                  #
+####################
+            </textarea
+                >
+                <br /><br />
+                <button onclick="loadMap()">Load Map</button>
+            </div>
+        </div>
+
+        <script>
+            class Vec2 {
+                constructor(x, y) {
+                    if (!(Number.isFinite(x) && Number.isFinite(y))) {
+                        throw new Error("Invalid x, y");
+                    }
+
+                    this.x = x;
+                    this.y = y;
+                }
+                length() {
+                    /// HYPOT!!!!
+                    return Math.sqrt(this.x * this.x + this.y * this.y);
+                }
+                angle() {
+                    const res = Math.atan2(this.y, this.x);
+                    // breakpoint
+                    return res;
+                }
+
+                angleBetween(other) {
+                    const dot = this.x * other.x + this.y * other.y;
+                    const magA = Math.hypot(this.x, this.y);
+                    const magB = Math.hypot(other.x, other.y);
+                    return Math.acos(dot / (magA * magB)); // radians
+                }
+
+                normalized() {
+                    const factor = 1 / this.length();
+                    return new Vec2(this.x * factor, this.y * factor);
+                }
+                turnedLeft() {
+                    return new Vec2(this.y, -this.x);
+                }
+                turnedRight() {
+                    return new Vec2(-this.y, this.x);
+                }
+                rotated(angle) {
+                    const a = this.angle() + angle;
+                    const l = this.length();
+
+                    return new Vec2(Math.cos(a) * l, Math.sin(a) * l);
+                }
+                minus(otherVec2) {
+                    return new Vec2(this.x - otherVec2.x, this.y - otherVec2.y);
+                }
+                plus(otherVec2) {
+                    return new Vec2(this.x + otherVec2.x, this.y + otherVec2.y);
+                }
+                scaled(factor) {
+                    return new Vec2(this.x * factor, this.y * factor);
+                }
+                increased(distance) {
+                    return this.normalized().scaled(this.length() + distance);
+                }
+                // round the components of the vector to the nearest multiple of factor
+                sanitized(factor = 0.5) {
+                    // hack
+                    return this;
+                    return new Vec2(Math.round(this.x / factor) * factor, Math.round(this.y / factor) * factor);
+                }
+
+                distanceTo(target) {
+                    const v2 = new Vec2(target.x - this.x, target.y - this.y);
+                    return v2.length;
+                }
+                clone() {
+                    return new Vec2(this.x, this.y);
+                }
+            }
+
+            class RotationAnimation {
+                static execute(game, targetView) {
+                    const anim = new RotationAnimation(game, targetView);
+                    anim.start();
+                }
+
+                constructor(game, angle) {
+                    const ticks = Math.floor(game.animationTime * game.fps);
+                    const anglePerTick = angle / ticks;
+
+                    this.game = game;
+                    this.frames = [];
+
+                    for (let i = 1; i < ticks; i++) {
+                        this.frames.push(game.player.view.rotated(i * anglePerTick));
+                    }
+
+                    this.frames.push(game.player.view.rotated(angle));
+                }
+
+                step() {
+                    if (this.frames.length === 0) {
+                        return true;
+                    }
+
+                    const newView = this.frames.shift();
+                    this.game.player.view = newView;
+                }
+
+                start() {
+                    this.startedAt = Date.now();
+                    this.game.animation = setInterval(() => {
+                        const done = this.step();
+                        // requestAnimationFrame(() => this.game.render());
+                        this.game.render();
+
+                        if (done) {
+                            clearInterval(this.game.animation);
+                            this.game.animation = null;
+                            console.log("Animation done in %f seconds", (Date.now() - this.startedAt) / 1000);
+                        }
+                    }, 1000 / this.game.fps);
+                }
+            }
+
+            class TranslationAnimation {
+                static execute(game, targetPos) {
+                    const anim = new TranslationAnimation(game, targetPos);
+                    anim.start();
+                }
+
+                constructor(game, targetPos) {
+                    const directionVec = targetPos.minus(game.player.pos);
+                    const ticks = Math.floor(game.animationTime * game.fps);
+
+                    this.game = game;
+                    this.frames = [];
+
+                    for (let i = 1; i < ticks; i++) {
+                        this.frames.push(game.player.pos.plus(directionVec.scaled(i / ticks)));
+                    }
+                    this.frames.push(targetPos);
+                    console.log(
+                        "Current Player Location [%f, %f]",
+                        game.player.pos.x,
+                        game.player.pos.y,
+                        this.frames.length,
+                    );
+                    console.log(
+                        "Created animation to translate player to new position [%f, %f]",
+                        targetPos.x,
+                        targetPos.y,
+                        this.frames.length,
+                    );
+                }
+
+                step() {
+                    if (this.frames.length === 0) {
+                        return true;
+                    }
+
+                    const newPos = this.frames.shift();
+                    console.log("Moving player to new position [%f, %f]", newPos.x, newPos.y, this.frames.length);
+                    this.game.player.pos = newPos;
+                }
+
+                start() {
+                    this.startedAt = Date.now();
+                    this.game.animation = setInterval(() => {
+                        const done = this.step();
+                        // requestAnimationFrame(() => this.game.render());
+                        this.game.render();
+
+                        if (done) {
+                            clearInterval(this.game.animation);
+                            this.game.animation = null;
+                            console.log("Animation done in %f seconds", (Date.now() - this.startedAt) / 1000);
+                        }
+                    }, 1000 / this.game.fps);
+                }
+            }
+
+            class DungeonCrawler {
+                constructor() {
+                    this.viewport = document.getElementById("viewport");
+                    /** @type {number} Screen width */
+                    this.width = 120;
+                    /** @type {number} Screen height */
+                    this.height = 40;
+                    /** @type {number} Number of frames per second used in animations */
+                    this.fps = 30;
+                    /** @type {number} Number of seconds a default animation takes */
+                    this.animationTime = 1.0;
+
+                    /** handle from setInterval */
+                    this.animation = null;
+
+                    this.player = {
+                        pos: new Vec2(10, 10),
+                        view: new Vec2(0, 1),
+                    };
+
+                    // Player position and orientation
+                    this.fov = Math.PI / 3; // 60 degrees
+
+                    // Map
+                    this.map = [];
+                    this.mapWidth = 0;
+                    this.mapHeight = 0;
+
+                    // Raycasting settings
+                    this.maxDepth = 20;
+
+                    this.setupControls();
+                    this.loadDefaultMap();
+                    this.render();
+                    // this.gameLoop();
+                }
+
+                loadDefaultMap() {
+                    const defaultMap = document.getElementById("mapText").value;
+                    this.parseMap(defaultMap);
+                }
+
+                parseMap(mapString) {
+                    //  _____ ___  ____   ___
+                    // |_   _/ _ \|  _ \ / _ \
+                    //   | || | | | | | | | | |
+                    //   | || |_| | |_| | |_| |
+                    //   |_| \___/|____/ \___/
+                    //-------------------------
+                    // Map is one of:
+                    // - Uint8Array
+                    // - Uint16Array
+                    // - Uint8Array[]
+                    // - Uint16Array[]
+                    // Info should include walkability, texture info, tile type (monster, chest, door, etc.)
+                    const lines = mapString.trim().split("\n");
+                    this.mapHeight = lines.length;
+                    this.mapWidth = Math.max(...lines.map((line) => line.length));
+
+                    this.map = [];
+                    for (let y = 0; y < this.mapHeight; y++) {
+                        this.map[y] = [];
+                        const line = lines[y] || "";
+                        for (let x = 0; x < this.mapWidth; x++) {
+                            this.map[y][x] = line[x] === "#" ? 1 : 0;
+                        }
+                    }
+
+                    // Find a starting position (first open space)
+                    for (let y = 1; y < this.mapHeight - 1; y++) {
+                        for (let x = 1; x < this.mapWidth - 1; x++) {
+                            if (this.map[y][x] === 0) {
+                                this.player.pos.x = x + 0.5;
+                                this.player.pos.y = y + 0.5;
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                setupControls() {
+                    const keys = new Set();
+                    const moveSpeed = 1.0;
+                    const rotSpeed = 0.05;
+
+                    document.addEventListener("keydown", (e) => {
+                        keys.add(e.key.toLowerCase());
+                    });
+
+                    document.addEventListener("keyup", (e) => {
+                        keys.delete(e.key.toLowerCase());
+                    });
+
+                    // Movement
+                    setInterval(() => {
+                        // Don't listen to inputs while we're in the middle of an animation
+                        if (this.animation !== null) {
+                            return;
+                        }
+                        if (keys.has("w")) {
+                            TranslationAnimation.execute(this, this.player.pos.plus(this.player.view).sanitized());
+                            return;
+                        }
+                        if (keys.has("s")) {
+                            TranslationAnimation.execute(this, this.player.pos.minus(this.player.view).sanitized());
+                            return;
+                        }
+                        if (keys.has("a")) {
+                            TranslationAnimation.execute(
+                                this,
+                                this.player.pos.plus(this.player.view.turnedLeft()).sanitized(),
+                            );
+                            return;
+                        }
+                        if (keys.has("d")) {
+                            TranslationAnimation.execute(
+                                this,
+                                this.player.pos.plus(this.player.view.turnedRight()).sanitized(),
+                            );
+                            return;
+                        }
+                        if (keys.has("arrowleft")) {
+                            // this.player.view.angle -= rotSpeed;
+                            return;
+                        }
+                        if (keys.has("arrowright")) {
+                            // this.player.view.angle += rotSpeed;
+                            return;
+                        }
+                    }, 1000 / this.fps);
+                }
+
+                isWall(x, y) {
+                    const mapX = Math.floor(x);
+                    const mapY = Math.floor(y);
+
+                    if (mapX < 0 || mapX >= this.mapWidth || mapY < 0 || mapY >= this.mapHeight) {
+                        return true;
+                    }
+
+                    return this.map[mapY][mapX] === 1;
+                }
+
+                castRay(angle) {
+                    const rayX = Math.cos(angle);
+                    const rayY = Math.sin(angle);
+
+                    let distance = 0;
+                    const step = 0.02;
+
+                    let testX = this.player.pos.x + rayX * distance;
+                    let testY = this.player.pos.y + rayY * distance;
+
+                    while (distance < this.maxDepth) {
+                        if (this.isWall(testX, testY)) {
+                            return [distance, testX, testY];
+                        }
+
+                        distance += step;
+                        testX = this.player.pos.x + rayX * distance;
+                        testY = this.player.pos.y + rayY * distance;
+                    }
+
+                    return [distance, maxX, maxY];
+                }
+
+                render() {
+                    let screen = "";
+                    const halfHeight = this.height / 2;
+
+                    for (let y = 0; y < this.height; y++) {
+                        for (let x = 0; x < this.width; x++) {
+                            const pa = this.player.view.angle();
+                            const rayAngle = pa - this.fov / 2 + (x / this.width) * this.fov;
+                            const [distance, rayX, rayY] = this.castRay(rayAngle);
+
+                            // Calculate wall height
+                            const wallH = halfHeight / distance;
+                            const ceiling = y < halfHeight - wallH;
+                            const floor = y > halfHeight + wallH;
+
+                            if (ceiling) {
+                                screen += " ";
+                                continue;
+                            }
+                            if (floor) {
+                                screen += ".";
+                                continue;
+                            }
+                            // Wall
+                            let char = ".";
+                            if (distance < 12) char = "░";
+                            if (distance < 8) char = "▒";
+                            if (distance < 4) char = "▓";
+                            if (distance < 2) char = "█";
+                            screen += char;
+                        }
+                        screen += "\n";
+                    }
+
+                    this.viewport.textContent = screen;
+                }
+
+                // gameLoop() {
+                //     this.render();
+                //     requestAnimationFrame(() => this.gameLoop());
+                // }
+            }
+
+            function loadMap() {
+                game.parseMap(document.getElementById("mapText").value);
+            }
+
+            // Start the game
+            const game = new DungeonCrawler();
+        </script>
+    </body>
+</html>

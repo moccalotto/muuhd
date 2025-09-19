@@ -1,7 +1,6 @@
 import { crackdown } from "../utils/crackdown.js";
 import { parseArgs } from "../utils/parseArgs.js";
 import { MessageType } from "../utils/messages.js";
-import { sprintf } from "sprintf-js";
 
 /** Regex to validate if a :help [topic] command i entered correctly */
 const helpRegex = /^:help(?:\s+(.*))?$/;
@@ -107,6 +106,7 @@ class MUDClient {
             };
 
             this.websocket.onerror = (error) => {
+                console.log("Websocket error", error);
                 this.updateStatus("Connection Error", "error");
                 this.writeToOutput("Connection error occurred. Retrying...", { class: "error" });
             };
@@ -203,7 +203,7 @@ class MUDClient {
         let help = helpRegex.exec(inputText);
         if (help) {
             console.log("here");
-            help[1] ? this.send(MshType.HELP, help[1].trim()) : this.send(MshType.HELP);
+            help[1] ? this.send(MessageType.HELP, help[1].trim()) : this.send(MessageType.HELP);
             this.echo(inputText);
             return;
         }

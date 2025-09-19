@@ -1,4 +1,3 @@
-import { ItemBlueprint } from "../models/item.js";
 import { gGame } from "../models/globals.js";
 
 //
@@ -12,7 +11,6 @@ import { gGame } from "../models/globals.js";
 // Seed the Game.ItemBlueprint store
 export class ItemSeeder {
     seed() {
-        //
         // __        __
         // \ \      / /__  __ _ _ __   ___  _ __  ___
         //  \ \ /\ / / _ \/ _` | '_ \ / _ \| '_ \/ __|
@@ -54,7 +52,6 @@ export class ItemSeeder {
             specialEffect: "TBD",
         });
 
-        //
         //     _
         //    / \   _ __ _ __ ___   ___  _ __ ___
         //   / _ \ | '__| '_ ` _ \ / _ \| '__/ __|
@@ -76,7 +73,6 @@ export class ItemSeeder {
             armorHitPoints: 6,
         });
 
-        //
         //  _  ___ _
         // | |/ (_) |_ ___
         // | ' /| | __/ __|

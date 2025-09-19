@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Simple 3D Dungeon Crawler</title>
+        <style>
+            body {
+                margin: 0;
+                overflow: hidden;
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
+                    "Helvetica Neue", sans-serif;
+                background-color: #111;
+                color: #fff;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            #info-container {
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                background-color: rgba(0, 0, 0, 0.7);
+                padding: 15px;
+                border-radius: 10px;
+                max-width: 350px;
+                border: 1px solid #444;
+            }
+            h1 {
+                margin-top: 0;
+                font-size: 1.2em;
+            }
+            p,
+            li {
+                font-size: 0.9em;
+                line-height: 1.5;
+            }
+            ul {
+                padding-left: 20px;
+            }
+            #crosshair {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 4px;
+                height: 4px;
+                background-color: white;
+                border-radius: 50%;
+                transform: translate(-50%, -50%);
+                pointer-events: none; /* So it doesn't interfere with mouse lock */
+            }
+            #game-canvas {
+                display: block;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="info-container">
+            <h1>First-Person Dungeon Crawler</h1>
+            <p>Create a <strong>map.txt</strong> file to load your own dungeon:</p>
+            <ul>
+                <li><code>#</code> = Wall</li>
+                <li><code>&nbsp;</code> (space) = Floor</li>
+                <li><code>P</code> = Player Start</li>
+            </ul>
+            <p><strong>Controls:</strong></p>
+            <ul>
+                <li><strong>Click Screen:</strong> Lock mouse for camera control</li>
+                <li><strong>W / S:</strong> Move Forward / Backward</li>
+                <li><strong>A / D:</strong> Strafe Left / Right</li>
+                <li><strong>Mouse:</strong> Look Around</li>
+                <li><strong>ESC:</strong> Unlock mouse</li>
+            </ul>
+            <input type="file" id="map-upload" accept=".txt" />
+        </div>
+
+        <div id="crosshair"></div>
+        <canvas id="game-canvas"></canvas>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+        <script>
+            /**
+             * A class that creates an ASCII effect.
+             *
+             * The ASCII generation is based on [jsascii]{@link https://github.com/hassadee/jsascii/blob/master/jsascii.js}.
+             *
+             * @three_import import { AsciiEffect } from 'three/addons/effects/AsciiEffect.js';
+             */
+            class AsciiEffect {
+                /**
+                 * Constructs a new ASCII effect.
+                 *
+                 * @param {WebGLRenderer} renderer - The renderer.
+                 * @param {string} [charSet=' .:-=+*#%@'] - The char set.
+                 * @param {AsciiEffect~Options} [options] - The configuration parameter.
+                 */
+                constructor(renderer, charSet = " .:-=+*#%@", options = {}) {
+                    // ' .,:;=|iI+hHOE#`$';
+                    // darker bolder character set from https://github.com/saw/Canvas-ASCII-Art/
+                    // ' .\'`^",:;Il!i~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$'.split('');
+
+                    // Some ASCII settings
+
+                    const fResolution = options["resolution"] || 0.15;
+                    const iScale = options["scale"] || 1;
+                    const bColor = options["color"] || false;
+                    const bAlpha = options["alpha"] || false;
+                    const bBlock = options["block"] || false;
+                    const bInvert = options["invert"] || false;
+                    const strResolution = options["strResolution"] || "low";
+
+                    let width, height;
+
+                    const domElement = document.createElement("div");
+                    domElement.style.cursor = "default";
+
+                    const oAscii = document.createElement("table");
+                    domElement.appendChild(oAscii);
+
+                    let iWidth, iHeight;
+                    let oImg;
+
+                    /**
+                     * Resizes the effect.
+                     *
+                     * @param {number} w - The width of the effect in logical pixels.
+                     * @param {number} h - The height of the effect in logical pixels.
+                     */
+                    this.setSize = function (w, h) {
+                        width = w;
+                        height = h;
+
+                        renderer.setSize(w, h);
+
+                        initAsciiSize();
+                    };
+
+                    /**
+                     * When using this effect, this method should be called instead of the
+                     * default {@link WebGLRenderer#render}.
+                     *
+                     * @param {Object3D} scene - The scene to render.
+                     * @param {Camera} camera - The camera.
+                     */
+                    this.render = function (scene, camera) {
+                        renderer.render(scene, camera);
+                        asciifyImage(oAscii);
+                    };
+
+                    /**
+                     * The DOM element of the effect. This element must be used instead of the
+                     * default {@link WebGLRenderer#domElement}.
+                     *
+                     * @type {HTMLDivElement}
+                     */
+                    this.domElement = domElement;
+
+                    // Throw in ascii library from https://github.com/hassadee/jsascii/blob/master/jsascii.js (MIT License)
+
+                    function initAsciiSize() {
+                        iWidth = Math.floor(width * fResolution);
+                        iHeight = Math.floor(height * fResolution);
+
+                        oCanvas.width = iWidth;
+                        oCanvas.height = iHeight;
+                        // oCanvas.style.display = "none";
+                        // oCanvas.style.width = iWidth;
+                        // oCanvas.style.height = iHeight;
+
+                        oImg = renderer.domElement;
+
+                        if (oImg.style.backgroundColor) {
+                            oAscii.rows[0].cells[0].style.backgroundColor = oImg.style.backgroundColor;
+                            oAscii.rows[0].cells[0].style.color = oImg.style.color;
+                        }
+
+                        oAscii.cellSpacing = "0";
+                        oAscii.cellPadding = "0";
+
+                        const oStyle = oAscii.style;
+                        oStyle.whiteSpace = "pre";
+                        oStyle.margin = "0px";
+                        oStyle.padding = "0px";
+                        oStyle.letterSpacing = fLetterSpacing + "px";
+                        oStyle.fontFamily = strFont;
+                        oStyle.fontSize = fFontSize + "px";
+                        oStyle.lineHeight = fLineHeight + "px";
+                        oStyle.textAlign = "left";
+                        oStyle.textDecoration = "none";
+                    }
+
+                    const strFont = "courier new, monospace";
+
+                    const oCanvasImg = renderer.domElement;
+
+                    const oCanvas = document.createElement("canvas");
+                    if (!oCanvas.getContext) {
+                        return;
+                    }
+
+                    const oCtx = oCanvas.getContext("2d");
+                    if (!oCtx.getImageData) {
+                        return;
+                    }
+
+                    let aCharList;
+                    if (charSet) {
+                        aCharList = charSet.split("");
+                    } else {
+                        const aDefaultCharList = " .,:;i1tfLCG08@".split("");
+                        const aDefaultColorCharList = " CGO08@".split("");
+                        aCharList = bColor ? aDefaultColorCharList : aDefaultCharList;
+                    }
+
+                    // Setup dom
+
+                    const fFontSize = (2 / fResolution) * iScale;
+                    const fLineHeight = (2 / fResolution) * iScale;
+
+                    // adjust letter-spacing for all combinations of scale and resolution to get it to fit the image width.
+
+                    let fLetterSpacing = 0;
+
+                    if (strResolution == "low") {
+                        switch (iScale) {
+                            case 1:
+                                fLetterSpacing = -1;
+                                break;
+                            case 2:
+                            case 3:
+                                fLetterSpacing = -2.1;
+                                break;
+                            case 4:
+                                fLetterSpacing = -3.1;
+                                break;
+                            case 5:
+                                fLetterSpacing = -4.15;
+                                break;
+                        }
+                    }
+
+                    if (strResolution == "medium") {
+                        switch (iScale) {
+                            case 1:
+                                fLetterSpacing = 0;
+                                break;
+                            case 2:
+                                fLetterSpacing = -1;
+                                break;
+                            case 3:
+                                fLetterSpacing = -1.04;
+                                break;
+                            case 4:
+                            case 5:
+                                fLetterSpacing = -2.1;
+                                break;
+                        }
+                    }
+
+                    if (strResolution == "high") {
+                        switch (iScale) {
+                            case 1:
+                            case 2:
+                                fLetterSpacing = 0;
+                                break;
+                            case 3:
+                            case 4:
+                            case 5:
+                                fLetterSpacing = -1;
+                                break;
+                        }
+                    }
+
+                    // can't get a span or div to flow like an img element, but a table works?
+
+                    // convert img element to ascii
+
+                    function asciifyImage(oAscii) {
+                        oCtx.clearRect(0, 0, iWidth, iHeight);
+                        oCtx.drawImage(oCanvasImg, 0, 0, iWidth, iHeight);
+                        const oImgData = oCtx.getImageData(0, 0, iWidth, iHeight).data;
+
+                        // Coloring loop starts now
+                        let strChars = "";
+
+                        // console.time('rendering');
+
+                        for (let y = 0; y < iHeight; y += 2) {
+                            for (let x = 0; x < iWidth; x++) {
+                                const iOffset = (y * iWidth + x) * 4;
+
+                                const iRed = oImgData[iOffset];
+                                const iGreen = oImgData[iOffset + 1];
+                                const iBlue = oImgData[iOffset + 2];
+                                const iAlpha = oImgData[iOffset + 3];
+                                let iCharIdx;
+
+                                let fBrightness;
+
+                                fBrightness = (0.3 * iRed + 0.59 * iGreen + 0.11 * iBlue) / 255;
+                                // fBrightness = (0.3*iRed + 0.5*iGreen + 0.3*iBlue) / 255;
+
+                                if (iAlpha == 0) {
+                                    // should calculate alpha instead, but quick hack :)
+                                    //fBrightness *= (iAlpha / 255);
+                                    fBrightness = 1;
+                                }
+
+                                iCharIdx = Math.floor((1 - fBrightness) * (aCharList.length - 1));
+
+                                if (bInvert) {
+                                    iCharIdx = aCharList.length - iCharIdx - 1;
+                                }
+
+                                // good for debugging
+                                //fBrightness = Math.floor(fBrightness * 10);
+                                //strThisChar = fBrightness;
+
+                                let strThisChar = aCharList[iCharIdx];
+
+                                if (strThisChar === undefined || strThisChar == " ") strThisChar = "&nbsp;";
+
+                                if (bColor) {
+                                    strChars +=
+                                        "<span style='" +
+                                        "color:rgb(" +
+                                        iRed +
+                                        "," +
+                                        iGreen +
+                                        "," +
+                                        iBlue +
+                                        ");" +
+                                        (bBlock
+                                            ? "background-color:rgb(" + iRed + "," + iGreen + "," + iBlue + ");"
+                                            : "") +
+                                        (bAlpha ? "opacity:" + iAlpha / 255 + ";" : "") +
+                                        "'>" +
+                                        strThisChar +
+                                        "</span>";
+                                } else {
+                                    strChars += strThisChar;
+                                }
+                            }
+
+                            strChars += "<br/>";
+                        }
+
+                        oAscii.innerHTML = `<tr><td style="display:block;width:${width}px;height:${height}px;overflow:hidden">${strChars}</td></tr>`;
+
+                        // console.timeEnd('rendering');
+
+                        // return oAscii;
+                    }
+                }
+            }
+
+            /**
+             * This type represents configuration settings of `AsciiEffect`.
+             *
+             * @typedef {Object} AsciiEffect~Options
+             * @property {number} [resolution=0.15] - A higher value leads to more details.
+             * @property {number} [scale=1] - The scale of the effect.
+             * @property {boolean} [color=false] - Whether colors should be enabled or not. Better quality but slows down rendering.
+             * @property {boolean} [alpha=false] - Whether transparency should be enabled or not.
+             * @property {boolean} [block=false] - Whether blocked characters should be enabled or not.
+             * @property {boolean} [invert=false] - Whether colors should be inverted or not.
+             * @property {('low'|'medium'|'high')} [strResolution='low'] - The string resolution.
+             **/
+
+            // --- Basic Setup ---
+            let scene, camera, renderer;
+            let mapData = [],
+                mapWidth,
+                mapHeight;
+            const TILE_SIZE = 5; // Size of each grid square in the world
+            const WALL_HEIGHT = 5;
+
+            // --- Player State ---
+            const player = {
+                height: WALL_HEIGHT / 2,
+                speed: 0.15,
+                turnSpeed: 0.05,
+                velocity: new THREE.Vector3(),
+                controls: {
+                    moveForward: false,
+                    moveBackward: false,
+                    moveLeft: false,
+                    moveRight: false,
+                },
+            };
+
+            // --- Initialization ---
+            function init() {
+                // Scene
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x1a1a1a);
+                scene.fog = new THREE.Fog(0x1a1a1a, 10, 50);
+
+                // Camera (First-person view)
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.y = player.height;
+
+                // Renderer
+                renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("game-canvas"), antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                document.body.appendChild(renderer.domElement);
+
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0x404040, 2);
+                scene.add(ambientLight);
+
+                const pointLight = new THREE.PointLight(0xffffff, 1.5, 100);
+                pointLight.position.set(0, WALL_HEIGHT * 1.5, 0); // Light is attached to player
+                camera.add(pointLight); // Attach light to camera
+                scene.add(camera); // Add camera to scene to ensure light is added
+
+                // Event Listeners
+                document.getElementById("map-upload").addEventListener("change", handleMapUpload);
+                window.addEventListener("resize", onWindowResize);
+                document.addEventListener("keydown", onKeyDown);
+                document.addEventListener("keyup", onKeyUp);
+
+                // Mouse Look Controls
+                setupPointerLock();
+
+                // Load a default map
+                loadMap(getDefaultMap());
+
+                // Start the game loop
+                animate();
+            }
+
+            // --- Map Handling ---
+            function getDefaultMap() {
+                return [
+                    "##########",
+                    "#P #     #",
+                    "#  # ### #",
+                    "#### # # #",
+                    "#    #   #",
+                    "# ###### #",
+                    "# #      #",
+                    "# # ######",
+                    "#   #    #",
+                    "##########",
+                ].join("\n");
+            }
+
+            function handleMapUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    loadMap(e.target.result);
+                };
+                reader.readAsText(file);
+            }
+
+            function loadMap(data) {
+                // Clear existing map objects from scene
+                const objectsToRemove = [];
+                scene.children.forEach((child) => {
+                    if (child.userData.isMapTile) {
+                        objectsToRemove.push(child);
+                    }
+                });
+                objectsToRemove.forEach((obj) => scene.remove(obj));
+
+                // Parse new map data
+                mapData = data.split("\n").map((row) => row.split(""));
+                mapHeight = mapData.length;
+                mapWidth = mapData[0].length;
+
+                // Create geometry and materials once
+                const wallGeometry = new THREE.BoxGeometry(TILE_SIZE, WALL_HEIGHT, TILE_SIZE);
+                const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.8 });
+
+                const floorGeometry = new THREE.PlaneGeometry(TILE_SIZE, TILE_SIZE);
+                const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x444444, side: THREE.DoubleSide });
+
+                // Build the scene from the map data
+                for (let y = 0; y < mapHeight; y++) {
+                    for (let x = 0; x < mapWidth; x++) {
+                        const char = mapData[y][x];
+                        const worldX = (x - mapWidth / 2) * TILE_SIZE;
+                        const worldZ = (y - mapHeight / 2) * TILE_SIZE;
+
+                        if (char === "#") {
+                            const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+                            wall.position.set(worldX, WALL_HEIGHT / 2, worldZ);
+                            wall.userData.isMapTile = true;
+                            scene.add(wall);
+                        } else {
+                            // Add floor for every non-wall tile
+                            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+                            floor.rotation.x = -Math.PI / 2;
+                            floor.position.set(worldX, 0, worldZ);
+                            floor.userData.isMapTile = true;
+                            scene.add(floor);
+                        }
+
+                        if (char === "@") {
+                            camera.position.x = worldX;
+                            camera.position.z = worldZ;
+                        }
+                    }
+                }
+
+                // Add a ceiling
+                const ceilingGeometry = new THREE.PlaneGeometry(mapWidth * TILE_SIZE, mapHeight * TILE_SIZE);
+                const ceilingMaterial = new THREE.MeshStandardMaterial({ color: 0x555555, side: THREE.DoubleSide });
+                const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
+                ceiling.rotation.x = Math.PI / 2;
+                ceiling.position.y = WALL_HEIGHT;
+                ceiling.userData.isMapTile = true;
+                scene.add(ceiling);
+            }
+
+            function isWall(x, z) {
+                const mapX = Math.floor(x / TILE_SIZE + mapWidth / 2);
+                const mapY = Math.floor(z / TILE_SIZE + mapHeight / 2);
+
+                if (mapX < 0 || mapX >= mapWidth || mapY < 0 || mapY >= mapHeight) {
+                    return true; // Treat out of bounds as a wall
+                }
+                return mapData[mapY][mapX] === "#";
+            }
+
+            // --- Controls & Movement ---
+            function setupPointerLock() {
+                const canvas = renderer.domElement;
+                canvas.addEventListener("click", () => {
+                    canvas.requestPointerLock();
+                });
+
+                document.addEventListener("pointerlockchange", () => {
+                    if (document.pointerLockElement === canvas) {
+                        document.addEventListener("mousemove", onMouseMove);
+                    } else {
+                        document.removeEventListener("mousemove", onMouseMove);
+                    }
+                });
+            }
+
+            function onMouseMove(event) {
+                if (document.pointerLockElement !== renderer.domElement) return;
+                const movementX = event.movementX || 0;
+                camera.rotation.y -= movementX * 0.002;
+            }
+
+            function onKeyDown(event) {
+                switch (event.code) {
+                    case "KeyW":
+                    case "ArrowUp":
+                        player.controls.moveForward = true;
+                        break;
+                    case "KeyS":
+                    case "ArrowDown":
+                        player.controls.moveBackward = true;
+                        break;
+                    case "KeyA":
+                    case "ArrowLeft":
+                        player.controls.moveLeft = true;
+                        break;
+                    case "KeyD":
+                    case "ArrowRight":
+                        player.controls.moveRight = true;
+                        break;
+                }
+            }
+
+            function onKeyUp(event) {
+                switch (event.code) {
+                    case "KeyW":
+                    case "ArrowUp":
+                        player.controls.moveForward = false;
+                        break;
+                    case "KeyS":
+                    case "ArrowDown":
+                        player.controls.moveBackward = false;
+                        break;
+                    case "KeyA":
+                    case "ArrowLeft":
+                        player.controls.moveLeft = false;
+                        break;
+                    case "KeyD":
+                    case "ArrowRight":
+                        player.controls.moveRight = false;
+                        break;
+                }
+            }
+
+            function updatePlayerPosition() {
+                const direction = new THREE.Vector3();
+                camera.getWorldDirection(direction);
+
+                const right = new THREE.Vector3();
+                right.crossVectors(camera.up, direction).normalize();
+
+                player.velocity.set(0, 0, 0);
+
+                if (player.controls.moveForward) {
+                    player.velocity.add(direction);
+                }
+                if (player.controls.moveBackward) {
+                    player.velocity.sub(direction);
+                }
+                if (player.controls.moveLeft) {
+                    player.velocity.add(right);
+                }
+                if (player.controls.moveRight) {
+                    player.velocity.sub(right);
+                }
+
+                if (player.velocity.length() > 0) {
+                    player.velocity.normalize().multiplyScalar(player.speed);
+                }
+
+                // Collision detection
+                const collisionMargin = TILE_SIZE / 4;
+                let moveX = true,
+                    moveZ = true;
+
+                if (isWall(camera.position.x + player.velocity.x * collisionMargin, camera.position.z)) {
+                    moveX = false;
+                }
+                if (isWall(camera.position.x, camera.position.z + player.velocity.z * collisionMargin)) {
+                    moveZ = false;
+                }
+
+                if (moveX) camera.position.x += player.velocity.x;
+                if (moveZ) camera.position.z += player.velocity.z;
+            }
+
+            // --- Main Loop ---
+            function animate() {
+                requestAnimationFrame(animate);
+                updatePlayerPosition();
+                renderer.render(scene, camera);
+            }
+
+            // --- Utility ---
+            function onWindowResize() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            // --- Start everything ---
+            init();
+        </script>
+    </body>
+</html>

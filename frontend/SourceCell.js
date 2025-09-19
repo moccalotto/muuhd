@@ -3,13 +3,17 @@ import { Direction } from "./WfcConstants.js";
 /**
  * Represents a 3x3 grid of values (sub-cells), that are used as building blocks for procedurally
  * generated grids. In reality, only the center value will be included in the outputted WfcGrid;
- * the 8 surrounding colors are there to establish which TrainingCells can live next to each other.
+ * the 8 surrounding colors are there to establish which SourceCells can live next to each other.
  */
 
-export class TrainingCell {
-    /** @param {Uint8Array} values The 9 sub cells that make up this TrainingCell */
-    constructor() {
-        this.values = new Uint8Array(9);
+export class SourceCell {
+    /** @param {Uint8Array?} values The 9 sub cells that make up this SourceCell */
+    constructor(values) {
+        if (values === undefined) {
+            this.values = new Uint8Array(9);
+            return;
+        }
+        this.values = values;
     }
 
     /** @returns {string} The actual value of this Trainin gCell is represented by its center value */
@@ -18,7 +22,18 @@ export class TrainingCell {
     }
 
     /**
-     * @param {TrainingCell} other
+     * @param {uint8} value
+     * Set the default value of this source cell */
+    set value(value) {
+        this.values[Direction.C] = value;
+    }
+
+    clone() {
+        return new SourceCell(this.values.slice());
+    }
+
+    /**
+     * @param {SourceCell} other
      * @param {number} direction
      *
      * @returns {boolean}
@@ -26,10 +41,9 @@ export class TrainingCell {
     potentialNeighbours(other, direction) {
         // sadly, we're not allowed to be friends with ourselves.
         if (this === other) {
-            console.log("WTF were checking to be friends with ourselves!", this, other, direction);
-            return false;
+            console.log("WTF were checking to be friends with ourselves!", { _this: this, other, direction });
+            // throw new Error("WTF were checking to be friends with ourselves!", { _this: this, other, direction });
         }
-
         return (
             //
             // if they want to live to my east,
@@ -69,7 +83,7 @@ export class TrainingCell {
                 // my north row must match their middle row
                 this.values[Direction.NW] === other.values[Direction.W] &&
                 this.values[Direction.N] === other.values[Direction.C] &&
-                this.values[Direction.Direction.NE] === other.values[Direction.E]) ||
+                this.values[Direction.NE] === other.values[Direction.E]) ||
             //
             // if they want to live to my south,
             // their two northern rows must match
@@ -78,7 +92,7 @@ export class TrainingCell {
                 // my middle row must match their north row
                 this.values[Direction.W] === other.values[Direction.NW] &&
                 this.values[Direction.C] === other.values[Direction.N] &&
-                this.values[Direction.E] === other.values[Direction.SE] &&
+                this.values[Direction.E] === other.values[Direction.NE] &&
                 // my south row must match their middle row
                 this.values[Direction.SW] === other.values[Direction.W] &&
                 this.values[Direction.S] === other.values[Direction.C] &&
