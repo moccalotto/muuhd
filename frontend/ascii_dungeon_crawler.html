@@ -5,30 +5,6 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>ASCII Dungeon Crawler</title>
         <style>
-            #color-lens {
-                color: yellow;
-                font-size: 40px;
-                /* Shape and Color */
-                width: 50px;
-                height: 50px;
-                background-color: none;
-                border-radius: 50%; /* Makes it a circle */
-
-                /* Positioning and Layering */
-                position: fixed; /* Floats on top of the page */
-                z-index: 9999;
-
-                /* Make it invisible to the cursor */
-                pointer-events: none;
-
-                /* The color blending effect! */
-                mix-blend-mode: color; /* try 'hue' or 'color' for different effects */
-                opacity: 1;
-
-                /* Initially hide it and center it on the cursor */
-                display: none;
-                transform: translate(-50%, -50%);
-            }
             body {
                 margin: 0;
                 padding: 20px;
@@ -42,9 +18,10 @@
                 text-align: center;
             }
 
-            #viewport {
-                font-size: 8px;
-                line-height: 8px;
+            #viewport,
+            #minimap {
+                font-size: 10px;
+                line-height: 10px;
                 white-space: pre;
                 border: 2px solid #0f0;
                 display: inline-block;
@@ -60,6 +37,60 @@
 
             #mapInput {
                 margin-top: 20px;
+            }
+
+            #minimap .player {
+                position: relative; /* anchor */
+                color: #000; /* text blends into background */
+                /* background-color: red; */
+            }
+            #minimap .player.north::before {
+                content: "↑";
+                /* content: "★"; */
+                position: absolute;
+                inset: 0; /* shorthand for top:0; right:0; bottom:0; left:0; */
+                display: flex; /* center it */
+                align-items: center;
+                justify-content: center;
+                pointer-events: none; /* don’t block clicks */
+                font-size: 1.5em; /* bigger if you want */
+                color: red;
+            }
+            #minimap .player.south::before {
+                content: "↓";
+                /* content: "★"; */
+                position: absolute;
+                inset: 0; /* shorthand for top:0; right:0; bottom:0; left:0; */
+                display: flex; /* center it */
+                align-items: center;
+                justify-content: center;
+                pointer-events: none; /* don’t block clicks */
+                font-size: 1.5em; /* bigger if you want */
+                color: red;
+            }
+            #minimap .player.east::before {
+                content: "→";
+                /* content: "★"; */
+                position: absolute;
+                inset: 0; /* shorthand for top:0; right:0; bottom:0; left:0; */
+                display: flex; /* center it */
+                align-items: center;
+                justify-content: center;
+                pointer-events: none; /* don’t block clicks */
+                font-size: 1.5em; /* bigger if you want */
+                color: red;
+            }
+            #minimap .player.west::before {
+                content: "←";
+                /* content: "★"; */
+                position: absolute;
+                inset: 0; /* shorthand for top:0; right:0; bottom:0; left:0; */
+                display: flex; /* center it */
+                align-items: center;
+                justify-content: center;
+                pointer-events: none; /* don’t block clicks */
+                font-size: 1.5em; /* bigger if you want */
+                color: red;
             }
 
             textarea {
@@ -87,29 +118,59 @@
     <body>
         <div id="gameContainer">
             <div id="viewport"></div>
-            <div id="controls">
-                <div>Use WASD or Arrow Keys to move and arrow keys to turn</div>
-            </div>
+
+            <div id="minimap"></div>
+
+            <div id="compass">orientation</div>
+
             <div id="mapInput">
                 <div>Load your map (# = walls, space = floor):</div>
                 <br />
                 <textarea id="mapText" rows="10" cols="50">
-####################
-#       #          #
-#       #     ###  #
-#       #       #  #
-#       ####    #  #
-#          #       #
-#       #  #       #
-#  #    ####    #  #
-#  #            #  #
-#  ###        ###  #
-#                  #
-####################
+############################################################
+############################################################
+############################################################
+##         #################        ########################
+## # #     ################# #   ## ########################
+##   #     #################   #    ##      ################
+## #   #   #################      # ##      ####        ####
+##                           # #    ##  #   ####   #  # ####
+###### ####################         ##      ####   #    ####
+###### #################### #       ##  # # ####        ####
+###### ####################                      #      ####
+###### #################### ##########      ####        ####
+###### #################### ##########  # # #### #  #   ####
+###### #################### ##########      ####   #  # ####
+###### #################### ####################        ####
+###### ####################     ############################
+###### ####################   # ############################
+###### #################### #   ############################
+###### ####################   # ############################
+###### ##       ###########     ############################
+###### ##       ########### # # ############################
+###### ##       ###########     ########        ############
+###### ## ##  # ###########  ## ########        ############
+###### ##                                #   #  ############
+######                                 # # #    ############
+######### # ##  ########### # #########      #  ############
+######### #   # ########### # ######### #  #    ############
+#########       ########### # #########         ############
+########################### # ######### #### ###############
+########################### # ######### #### ###############
+########################### # ######### #### ###############
+########################### # ######### #### ###############
+########################### # ####           ###############
+#########################   # ####  # #    # ########    ###
+#########################              #  #  ######## #  ###
+######################### #  ##### # #   # # ########    ###
+######################### # #                            ###
+#########################     #######################  # ###
+#####################################################    ###
+############################################################
             </textarea
                 >
                 <br /><br />
-                <button onclick="loadMap()">Load Map</button>
+                <button onclick="game.loadMap()">Load Map</button>
             </div>
         </div>
 
