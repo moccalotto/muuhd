@@ -1,35 +1,12 @@
+import { Vector2i, Orientation, RelativeMovement, PI_OVER_TWO } from "./ascii_types.js";
+import { FirstPersonRenderer } from "./ascii_first_person_renderer.js";
+import { MiniMapRenderer } from "../ascii_minimap_renderer.js";
+import { Texture } from "./ascii_textureloader.js";
+import { AsciiWindow } from "./ascii_window.js";
+import { TileMap } from "./ascii_tile_map.js";
+import eobWallUrl1 from "./eob1.png";
+import eobWallUrl2 from "./eob2.png";
 import { sprintf } from "sprintf-js";
-import { Vector2i } from "./vec2.js";
-import { AsciiWindow } from "./ascrii_window.js";
-
-const PI_OVER_TWO = Math.PI / 2;
-
-/**
- * Enum Cardinal Direction (east north west south)
- * @constant
- * @readonly
- */
-const CardinalDirection = {
-    /** @constant @readonly @type {number} Going east increases X */
-    EAST: 0,
-    /** @constant @readonly @type {number} Going south increases Y */
-    SOUTH: 1,
-    /** @constant @readonly @type {number} Going west decreases X */
-    WEST: 2,
-    /** @constant @readonly @type {number} Going south decreases Y */
-    NORTH: 3,
-};
-
-/**
- * Enum Relative Direction (forward, left, right, backwards)
- * @readonly
- */
-const RelativeMovement = {
-    FORWARD: 0,
-    LEFT: 3,
-    BACKWARD: 2,
-    RIGHT: 1,
-};
 
 class Player {
     _posV = new Vector2i();
@@ -56,7 +33,7 @@ class Player {
     }
 
     get orientation() {
-        return this._directionV.cardinalDirection();
+        return this._directionV.orientation();
     }
 
     set orientation(o) {
@@ -64,19 +41,19 @@ class Player {
         // Sanitize o
         o = ((o | 0) + 4) % 4;
 
-        if (o === CardinalDirection.EAST) {
+        if (o === Orientation.EAST) {
             this._directionV = new Vector2i(1, 0);
             return;
         }
-        if (o === CardinalDirection.NORTH) {
+        if (o === Orientation.NORTH) {
             this._directionV = new Vector2i(0, 1);
             return;
         }
-        if (o === CardinalDirection.WEST) {
+        if (o === Orientation.WEST) {
             this._directionV = new Vector2i(-1, 0);
             return;
         }
-        if (o === CardinalDirection.SOUTH) {
+        if (o === Orientation.SOUTH) {
             this._directionV = new Vector2i(0, -1);
             return;
         }
@@ -89,7 +66,12 @@ class Player {
 
 class DungeonCrawler {
     get isAnimating() {
-        return this.animation.frames.length > 0;
+        return (
+            this.animation === undefined ||
+            this.animation.targetAngle !== undefined ||
+            this.animation.targetX !== undefined ||
+            this.animation.targetY !== undefined
+        );
     }
 
     constructor() {
@@ -108,38 +90,18 @@ class DungeonCrawler {
             names: {},
         };
 
-        this.map = {
-            /** @readonly height of map */
-            width: 0,
-
-            /** @readonly width of map */
-            height: 0,
-
-            /**
-             * @readonly
-             * @type {Uint8Array[]}
-             * info about each cell/tile in the map (is it floor, is it a wall, etc.)
-             *
-             * The number 0 is navigable and has no decoration.
-             * The number 1 is not navigable, and is a nondescript wall.
-             *
-             * 1 bit for navigable
-             * 3 bits for cell type decoration / voxel type
-             * 2 bits for floor decoration.
-             * 2 bits for ceiling decoration.
-             */
-            cells: [],
-        };
+        /** @readonly @type {TileMap} */
+        this.map;
 
         this.animation = {
-            /** @constant @readonly @type {number} Number of frames per second used in animations */
-            fps: 30,
-
-            /** @constant @readonly number of seconds a typical animation takes */
-            duration: 0.7,
-
-            /** Array storing information about each frame of an animation to show */
-            frames: [],
+            StartTime: undefined,
+            StartAngle: undefined,
+            StartX: undefined,
+            StartY: undefined,
+            targetTime: undefined,
+            targetAngle: undefined,
+            targetX: undefined,
+            targetY: undefined,
         };
 
         /** @readonly */
@@ -148,15 +110,14 @@ class DungeonCrawler {
             ticker: 0,
             maxDepth: 5,
             fov: Math.PI / 3, // 60 degrees, increase maybe?
-            view: new AsciiWindow(document.getElementById("viewport"), 120, 40),
+            view: new AsciiWindow(document.getElementById("viewport"), 120, 50),
+
+            /** @type {FirstPersonRenderer} */
+            renderer: null,
         };
 
-        /** @readonly */
-        this.minimap = {
-            parentElement: document.getElementById("minimap"),
-            /** @type {Element[][]} */
-            elements: [],
-        };
+        /** @readonly @type {MiniMapRenderer} */
+        this.minimap;
 
         /**
          * @typedef Player
@@ -167,64 +128,69 @@ class DungeonCrawler {
         this.player = new Player();
 
         this.setupControls();
-        this.setupAnimationLoop();
 
         this.loadMap();
-        this.render(this.player.x, this.player.y, this.player.orientation * PI_OVER_TWO, this.animation.frames.length);
         this.updateCompass();
+        this.rendering.view.commitToDOM();
+        this.render(this.player.x, this.player.y, this.player.orientation * PI_OVER_TWO);
+        this.gameLoop();
+    }
+
+    render(posX = this.player.x, posY = this.player.y, angle = this.player.angle) {
+        if (!this.rendering.renderer) {
+            console.log("Renderer not ready yet");
+            return;
+        }
+        this.rendering.renderer.renderFrame(
+            posX + 0.5, // add .5 to get camera into center of cell
+            posY + 0.5, // add .5 to get camera into center of cell
+            angle,
+        );
     }
 
     loadMap() {
-        this.minimap.parentElement.innerHTML = "";
-
         const mapString = document.getElementById("mapText").value;
-        const lines = mapString.trim().split("\n");
 
-        const h = (this.map.height = lines.length);
-        const w = (this.map.width = Math.max(...lines.map((line) => line.length)));
+        this.map = TileMap.fromText(mapString);
 
-        this.map.cells = new Array(h).fill().map(() => new Uint8Array(w));
-        this.minimap.elements = new Array(h).fill().map(() => new Array(w));
-        this.minimap.parentElement.innerHTML = "";
-
-        for (let y = 0; y < h; y++) {
-            //
-            const row = document.createElement("div");
-
-            for (let x = 0; x < w; x++) {
-                const isFree = lines[y][x] === " ";
-
-                //
-                // === Internal map ===
-                //
-                this.map.cells[y][x] = isFree ? 0 : 1;
-
-                //
-                // === Mini Map ===
-                //
-                const mmElement = document.createElement("span");
-                mmElement.textContent = isFree ? " " : "#";
-                row.appendChild(mmElement);
-                this.minimap.elements[y][x] = mmElement;
-            }
-            this.minimap.parentElement.appendChild(row);
+        this.player._posV = this.map.findFirst({ startLocation: true });
+        if (!this.player._posV) {
+            throw new Error("Could not find a start location for the player");
         }
+        console.log(this.map.getAreaAround(this.player.x, this.player.y, 5).toString());
 
-        // Find a starting position (first open space)
-        for (let y = 1; y < this.map.height - 1; y++) {
-            for (let x = 1; x < this.map.width - 1; x++) {
-                if (this.isWall(x, y)) {
-                    continue;
+        const minimapElement = document.getElementById("minimap");
+        const minimapWindow = new AsciiWindow(minimapElement, 9, 9); // MAGIC NUMBERS: width and height of the minimap
+        this.minimap = new MiniMapRenderer(minimapWindow, this.map);
+
+        const textureUrls = [eobWallUrl1, eobWallUrl2];
+        const textureCount = textureUrls.length;
+        const textures = [];
+
+        textureUrls.forEach((url) => {
+            Texture.fromSource(url).then((texture) => {
+                textures.push(texture);
+
+                if (textures.length < textureCount) {
+                    return;
                 }
-                this.player.x = x;
-                this.player.y = y;
-                return;
-            }
-        }
-        this.updateMinimap();
+
+                this.rendering.renderer = new FirstPersonRenderer(
+                    this.rendering.view,
+                    this.map,
+                    this.rendering.fov,
+                    this.rendering.maxDepth,
+                    textures,
+                );
+                this.render();
+                this.minimap.draw(this.player.x, this.player.y, this.player.orientation);
+
+                console.debug("renderer ready", texture);
+            });
+        });
     }
 
-    startTurnAnimation(clockwise, quarterTurns = 1) {
+    startTurnAnimation(quarterTurns = 1) {
         if (this.isAnimating) {
             throw new Error("Cannot start an animation while one is already running");
         }
@@ -233,42 +199,38 @@ class DungeonCrawler {
             return;
         }
 
-        const newDirection = clockwise
-            ? this.player._directionV.clone().rotateCW(quarterTurns)
-            : this.player._directionV.clone().rotateCCW(quarterTurns);
+        this.animation = {
+            startAngle: this.player.angle,
+            startTime: performance.now(),
+            startX: this.player.x,
+            startY: this.player.y,
 
-        const ticks = Math.floor(this.animation.duration * this.animation.fps);
-        const startAngle = this.player.angle;
-        const slice = this.player._directionV.angleTo(newDirection) / ticks;
-
-        this.animation.frames = [];
-
-        for (let i = 1; i < ticks; i++) {
-            this.animation.frames.push([
-                this.player.x, //
-                this.player.y, //
-                startAngle + slice * i, //
-            ]);
-        }
-
-        this.animation.frames.push([this.player.x, this.player.y, newDirection.angle()]);
+            targetAngle: this.player.angle + PI_OVER_TWO * quarterTurns,
+            targetTime: performance.now() + 700, // MAGIC NUMBER: these animations take .7 seconds
+            targetX: this.player.x,
+            targetY: this.player.y,
+        };
 
         //
-        //
-        this.player._directionV = newDirection;
-        this.updateMinimap();
+        this.player._directionV.rotateCCW(quarterTurns);
         this.updateCompass();
     }
 
     /** @type {RelativeMovement} Direction the player is going to move */
     startMoveAnimation(direction) {
+        //
         if (this.isAnimating) {
             throw new Error("Cannot start an animation while one is already running");
         }
 
+        //
+        // When we move, we move relative to our current viewing direction,
+        // so moving LEFT means moving 1 square 90 degrees from our viewing direction vector
         const targetV = this.player._directionV.rotatedCCW(direction | 0).added(this.player._posV);
 
-        if (this.isWall(targetV.x, targetV.y)) {
+        //
+        // We cant move into walls
+        if (this.map.isWall(targetV.x, targetV.y)) {
             this.debounce = (this.pollsPerSec / 5) | 0;
             console.info(
                 "bumped into wall at %s (mypos: %s), direction=%d",
@@ -279,21 +241,19 @@ class DungeonCrawler {
             return;
         }
 
-        const ticks = Math.floor(this.animation.duration * this.animation.fps);
-        const stepX = (targetV.x - this.player.x) / ticks;
-        const stepY = (targetV.y - this.player.y) / ticks;
+        this.animation = {
+            startAngle: this.player.angle,
+            startTime: performance.now(),
+            startX: this.player.x,
+            startY: this.player.y,
 
-        this.animation.frames = [];
-        for (let i = 1; i < ticks; i++) {
-            this.animation.frames.push([
-                this.player.x + stepX * i, //
-                this.player.y + stepY * i, //
-                this.player.angle, //
-            ]);
-        }
-        this.animation.frames.push([targetV.x, targetV.y, this.player.angle]);
+            targetAngle: this.player.angle,
+            targetTime: performance.now() + 700, // MAGIC NUMBER: these animations take .7 seconds
+            targetX: targetV.x,
+            targetY: targetV.y,
+        };
         this.player._posV = targetV;
-        this.updateMinimap();
+
         this.updateCompass(); // technically not necessary, but Im anticipating the need + compensating for my bad memory.
     }
 
@@ -307,10 +267,10 @@ class DungeonCrawler {
             KeyW: () => this.startMoveAnimation(RelativeMovement.FORWARD),
             ArrowUp: () => this.startMoveAnimation(RelativeMovement.FORWARD),
             ArrowDown: () => this.startMoveAnimation(RelativeMovement.BACKWARD),
-            ArrowLeft: () => this.startTurnAnimation(true),
-            ArrowRight: () => this.startTurnAnimation(false),
-            KeyQ: () => this.startTurnAnimation(true),
-            KeyE: () => this.startTurnAnimation(false),
+            ArrowLeft: () => this.startTurnAnimation(-1),
+            ArrowRight: () => this.startTurnAnimation(1),
+            KeyQ: () => this.startTurnAnimation(-1),
+            KeyE: () => this.startTurnAnimation(1),
         };
         this.keys.names = Object.keys(this.keys.handlers);
 
@@ -361,134 +321,54 @@ class DungeonCrawler {
     }
 
     handleAnimation() {
+        //
+        // Guard: only animate if called for
         if (!this.isAnimating) {
+            this.animation = {};
             return;
         }
 
-        const [x, y, a] = this.animation.frames.shift();
-        const framesLeft = this.animation.frames.length;
-        this.render(x, y, a, framesLeft);
-    }
-
-    //  _____ ___  ____   ___
-    // |_   _/ _ \|  _ \ / _ \ _
-    //   | || | | | | | | | | (_)
-    //   | || |_| | |_| | |_| |_
-    //   |_| \___/|____/ \___/(_)
-    // -----------------------------
-    // Animation loop
-    // requestAnimationFrame(loop);
-    // requires using deltaT rather than ticks, etc.
-    setupAnimationLoop() {
-        const ticks = Math.round(1000 / this.animation.fps);
-        this.animation.interval = setInterval(() => this.handleAnimation(), ticks);
-    }
-
-    isWall(x, y) {
-        let mapX = x | 0;
-        let mapY = y | 0;
-
-        if (mapX < 0 || mapX >= this.map.width || mapY < 0 || mapY >= this.map.height) {
-            return true;
+        //
+        // Guard, stop animation if it took too long
+        if (this.animation.targetTime <= performance.now()) {
+            this.render(this.player.x, this.player.y, this.player.angle);
+            this.animation = {};
+            this.minimap.draw(this.player.x, this.player.y, this.player.orientation);
+            return;
         }
 
-        return this.map.cells[mapY][mapX] !== 0;
+        const a = this.animation;
+
+        const nowT = performance.now();
+        const animY = a.targetY - a.startY; // how much this animation causes us to move in the y-direction
+        const animX = a.targetX - a.startX; // how much this animation causes us to move in the x-direction
+        const animA = a.targetAngle - a.startAngle; // how much this animation causes us to rotate in total
+        const animT = a.targetTime - a.startTime; // how long (in ms) this animation is supposed to take.
+
+        const deltaT = (nowT - a.startTime) / animT;
+        if (deltaT > 1) {
+            throw new Error("Not supposed to happen!");
+        }
+
+        // render
+        this.render(
+            a.startX + animX * deltaT, //
+            a.startY + animY * deltaT, //
+            a.startAngle + animA * deltaT, //
+        );
     }
 
-    castRay(camX, camY, camAngle, angleOffset) {
-        const rayAngle = camAngle + angleOffset;
-        const rayX = Math.cos(rayAngle);
-        const rayY = Math.sin(rayAngle);
-        const fishEye = Math.cos(angleOffset); // corrects fish-eye effect https://stackoverflow.com/questions/66591163/how-do-i-fix-the-warped-perspective-in-my-raycaster
-        // const fishEye = 1;
-
-        let distance = Math.SQRT1_2 / 2;
-        let step = 0.0001;
-
-        while (distance < this.rendering.maxDepth) {
-            const testX = camX + rayX * distance;
-            const testY = camY + rayY * distance;
-
-            if (this.isWall(testX, testY)) {
-                return [
-                    distance * fishEye,
-                    {
-                        // testX,
-                        // testY,
-                        // rayDistance: distance, // the distance the ray traveled, not the distance the object was away from us
-                        color: (1 - distance / this.rendering.maxDepth) * 1.0,
-                    },
-                ];
-            }
-
-            distance += step;
+    gameLoop() {
+        //
+        // We're not animating, so we chill out for 50 msec
+        if (!this.isAnimating) {
+            setTimeout(() => this.gameLoop(), 50); // MAGIC NUMBER
+            return;
         }
 
-        return [this.rendering.maxDepth, "#000"];
-    }
+        this.handleAnimation();
 
-    render(x, y, direction) {
-        if (!this.rendering.enabled) {
-            return false;
-        }
-
-        this.rendering.ticker++;
-
-        x += 0.5;
-        y += 0.5;
-
-        const h = this.rendering.view.height;
-        const w = this.rendering.view.width;
-
-        // const middle = this.rendering.height / 2;
-        // Hack to simulate bouncy walking by moving the middle of the screen up and down a bit
-        const bounce = Math.sin(this.rendering.ticker / 4) * 0.2;
-        const middle = h / 2 + bounce;
-
-        for (let screenX = 0; screenX < w; screenX++) {
-            //
-            //
-            const rayOffset = (screenX / w) * this.rendering.fov - this.rendering.fov / 2;
-
-            //
-            // Cast the ray, one ray per column, just like wolfenstein
-            const [distance, wall] = this.castRay(x, y, direction, rayOffset);
-
-            //
-            // Start drawing
-            for (let screenY = 0; screenY < h; screenY++) {
-                //
-                // Calculate how high walls are at the distance of the ray's intersection
-                const wallH = middle / distance;
-
-                //
-                // Given the current y-coordinate and distance, are we hitting the ceiling?
-                if (screenY < middle - wallH) {
-                    this.rendering.view.put(screenX, screenY, "´", "#999");
-                    continue;
-                }
-
-                //
-                // Given the current y-coordinate and distance, are we hitting the floor?
-                if (screenY > middle + wallH) {
-                    this.rendering.view.put(screenX, screenY, "~", "#b52");
-                    continue;
-                }
-
-                //
-                // We've either hit a wall or the limit of our visibility,
-                // So we Determine the color of the pixel to draw.
-                const color = wall && wall.color ? wall.color : 1 - distance / this.rendering.maxDepth;
-
-                // TODO: Lerp these characters.
-                // const distancePalette = ["█", "▓", "▒", "░", " "];
-                const distancePalette = ["#", "%", "+", "÷", " "];
-                const char = distancePalette[distance | 0];
-
-                this.rendering.view.put(screenX, screenY, char, color);
-            }
-        }
-        this.rendering.view.commitToDOM();
+        requestAnimationFrame(() => this.gameLoop());
     }
 
     updateCompass() {
@@ -498,37 +378,11 @@ class DungeonCrawler {
         document.getElementById("compass").textContent = sprintf(
             "%s %s (%d --> %.2f [%dº])",
             this.player._posV,
-            Object.keys(CardinalDirection)[this.player.orientation].toLowerCase(),
+            Object.keys(Orientation)[this.player.orientation].toLowerCase(),
             this.player.orientation,
             this.player.orientation * PI_OVER_TWO,
             this.player.orientation * 90,
         );
-    }
-
-    updateMinimap() {
-        if (!this.player.withinAABB(this.map.width - 1, this.map.height - 1)) {
-            console.error("Player out of bounds");
-            return;
-        }
-
-        //
-        // Remove the old player symbol
-        const playerEl = document.querySelector(".player");
-        if (playerEl) {
-            playerEl.className = "";
-        }
-
-        // This is just for debugging!
-        //
-
-        for (let y = 0; y < this.map.height; y++) {
-            for (let x = 0; x < this.map.width; x++) {
-                this.minimap.elements[y][x].textContent = this.map.cells[y][x] ? "#" : " ";
-            }
-        }
-        // Add the player token to the minimap
-        const dirForCSS = Object.keys(CardinalDirection)[this.player.orientation].toLowerCase();
-        this.minimap.elements[this.player.y][this.player.x].classList.add("player", dirForCSS);
     }
 }
 

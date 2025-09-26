@@ -117,6 +117,72 @@ Each group chat has a name.
       of the cool stuff the players have done with the room.
 
 ```
+//  __  __                         _     ___
+// |  \/  | ___  _ __   ___ _   _ | |   ( _ )
+// | |\/| |/ _ \| '_ \ / _ \ | | / __)  / _ \/\
+// | |  | | (_) | | | |  __/ |_| \__ \ | (_>  <
+// |_|  |_|\___/|_| |_|\___|\__, (   /  \___/\/
+//                          |___/ |_|
+//  _____
+// | ____|_ __   ___ ___  _ __   ___  _ __ ___  _   _
+// |  _| | '_ \ / __/ _ \| '_ \ / _ \| '_ ` _ \| | | |
+// | |___| | | | (_| (_) | | | | (_) | | | | | | |_| |
+// |_____|_| |_|\___\___/|_| |_|\___/|_| |_| |_|\__, |
+//                                              |___/
+```
+
+- `VAT (Very Awful Tax)`
+    - Applies only to transfers of valuables between parties/players.
+    - Its 10%
+    - Also, players cannot give each other items, they must sell them for a fair price (50% of worth)
+
+- `Financial Obligations`
+    - A party can have between 0 and 255 FOs.
+    - An obligation of X (where X is higher than 0) means that `X * 100 / 255` percent of all gold is subtracted
+        - When you find it
+        - When you sell an item
+        - When you acquire gold from quests, jobs, services, etc.
+        - When another player/party gives or lends you money
+    - Your obligation can reach 255, but never go above. This means that, if you have an obligation if `X`, and
+      means you cannot do something (hire a hireling, take out a loan, or buy a BOO) that has an FO
+      level higher than `255-X`;
+    - FO only affects gold, not items, gems, etc, but it will affect you once you try to sell those items.
+
+- `Hirelings`
+    - Can be hired in taverns
+    - Can be exchanged with other players?
+    - Often cost money to buy
+    - Often come with an FO that only goes away when they leave the party.
+
+- `Bases of Operation (BOOs)`
+    - Can be purchased in cities.
+    - Cost initial large amount of gold
+    - Always comes with some level of FO that
+      only goes away if you sell the BOO or if it is destroyed by
+      baddies.
+
+- `Loans`
+    - Gives you cash in hand.
+    - Comes with an FO that only goes away when you pay back the loan in its
+      entirety. The obligation is not lowered, even if you pay back 99.9% of the
+      loan.
+
+- `Artifacts`
+    - Certain magical items come with FOs.
+      Because you rent them rather than own them.
+
+- `Pleading`
+    - Certain monsters (like Dragons, Gins, Dark Lord Wizards, Bandit Leaders,
+      etc) will let you walk away in exchange for a certain level of FO. This
+      only goes away when you kill the monster.
+    - Note that ordinary bandits will not let you live - they are not clever
+      enough to see your potential.
+    - Pleading only works if you have more free FOs than the level of the
+      monster.
+    - Pleading will usually cost you either 80% of your free FOs, or twice the
+      level of the monster, whichever is lower.
+
+```
  ____  _   _ _   _ ____
 |  _ \| | | | \ | / ___|
 | |_) | | | |  \| \___ \

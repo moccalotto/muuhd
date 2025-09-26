@@ -41,7 +41,7 @@
     },
     "prettier": {
         "tabWidth": 4,
-        "printWidth": 120,
+        "printWidth": 160,
         "quoteProps": "consistent",
         "singleQuote": false,
         "trailingComma": "all",

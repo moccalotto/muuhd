@@ -1,3 +1,32 @@
+export const PI_OVER_TWO = Math.PI / 2;
+
+/**
+ * Enum Cardinal Direction (east north west south)
+ * @constant
+ * @readonly
+ */
+export const Orientation = {
+    /** @constant @readonly @type {number} Going east increases X */
+    EAST: 0,
+    /** @constant @readonly @type {number} Going south increases Y */
+    SOUTH: 1,
+    /** @constant @readonly @type {number} Going west decreases X */
+    WEST: 2,
+    /** @constant @readonly @type {number} Going south decreases Y */
+    NORTH: 3,
+};
+
+/**
+ * Enum Relative Direction (forward, left, right, backwards)
+ * @readonly
+ */
+export const RelativeMovement = {
+    FORWARD: 0,
+    LEFT: 3,
+    BACKWARD: 2,
+    RIGHT: 1,
+};
+
 export class Vector2i {
     constructor(x = 0, y = 0) {
         this.x = x | 0; // force int
@@ -46,7 +75,7 @@ export class Vector2i {
     }
 
     // which cardinal direction are we in?
-    cardinalDirection() {
+    orientation() {
         if (this.y === 0) {
             if (this.x > 0) {
                 return 0;

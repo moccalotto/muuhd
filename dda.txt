@@ -1,0 +1,212 @@
+You said:
+Im making a dungeon crawler where all the walls are guaranteed to be tile-aligned. It's wolfensteil graphics, so no need for real ray tracing, only vertical ray casting in 2d. Can you help me make a fast javascript ray-caster that does not just increment the rays a tiny bit every time. I think the algorithm may be called DDA. I also need to know where on the wall the ray hits, so I can apply the correct texture
+ChatGPT said:
+
+Yes — you’re talking about the DDA (Digital Differential Analyzer) algorithm, which is the standard way to do fast 2D grid ray casting for Wolfenstein-style engines.
+
+The idea: instead of stepping pixel by pixel, you compute how far you need to go to reach the next vertical or next horizontal grid line, then keep stepping grid-by-grid until you hit a wall.
+
+Here’s a compact JavaScript implementation outline:
+
+// grid: 2D array of 0 = empty, 1 = wall
+// posX, posY: player position in map coords (floats, tile units)
+// dirX, dirY: ray direction (normalized vector)
+// maxDist: optional cutoff distance
+function castRay(grid, posX, posY, dirX, dirY, maxDist = 100) {
+  const mapWidth  = grid[0].length;
+  const mapHeight = grid.length;
+
+  // Current map square
+  let mapX = Math.floor(posX);
+  let mapY = Math.floor(posY);
+
+  // Length of ray from one x or y-side to next x or y-side
+  const deltaDistX = Math.abs(1 / dirX);
+  const deltaDistY = Math.abs(1 / dirY);
+
+  // Step direction (+1 or -1) and initial sideDist
+  let stepX, stepY;
+  let sideDistX, sideDistY;
+
+  if (dirX < 0) {
+    stepX = -1;
+    sideDistX = (posX - mapX) * deltaDistX;
+  } else {
+    stepX = 1;
+    sideDistX = (mapX + 1.0 - posX) * deltaDistX;
+  }
+
+  if (dirY < 0) {
+    stepY = -1;
+    sideDistY = (posY - mapY) * deltaDistY;
+  } else {
+    stepY = 1;
+    sideDistY = (mapY + 1.0 - posY) * deltaDistY;
+  }
+
+  let hit = false;
+  let side = 0; // 0 = hit x-side, 1 = hit y-side
+
+  // DDA loop
+  while (!hit) {
+    if (sideDistX < sideDistY) {
+      sideDistX += deltaDistX;
+      mapX += stepX;
+      side = 0;
+    } else {
+      sideDistY += deltaDistY;
+      mapY += stepY;
+      side = 1;
+    }
+
+    // Check for out of bounds
+    if (mapX < 0 || mapX >= mapWidth || mapY < 0 || mapY >= mapHeight) {
+      return null; // no hit
+    }
+
+    // Check if ray hit a wall
+    if (grid[mapY][mapX] > 0) hit = true;
+    if (Math.min(sideDistX, sideDistY) > maxDist) return null;
+  }
+
+  // Calculate distance to wall
+  let perpWallDist;
+  if (side === 0) {
+    perpWallDist = (mapX - posX + (1 - stepX) / 2) / dirX;
+  } else {
+    perpWallDist = (mapY - posY + (1 - stepY) / 2) / dirY;
+  }
+
+  // Where on the wall did we hit? (texture coordinate)
+  let wallX;
+  if (side === 0) {
+    wallX = posY + perpWallDist * dirY;
+  } else {
+    wallX = posX + perpWallDist * dirX;
+  }
+  wallX -= Math.floor(wallX); // fractional part only [0..1)
+
+  return {
+    mapX, mapY,         // tile coords
+    side,               // hit vertical or horizontal wall
+    distance: perpWallDist,
+    textureX: wallX     // use this to index into texture
+  };
+}
+
+Key points:
+
+DDA stepping means you only move to the next grid line each time → very fast.
+
+side tells you if you hit a vertical or horizontal wall (so you can darken one side for fake lighting).
+
+textureX gives you the fractional offset into the wall tile (for correct texture mapping).
+
+👉 Then in your renderer, for each vertical screen stripe:
+
+Compute the ray direction from the camera plane.
+
+Call castRay.
+
+Use distance to determine column height.
+
+Use textureX to select the right column from your texture.
+
+Do you want me to also show you how to set up the main loop that casts all rays for the screen (like Wolfenstein’s projection plane math), or are you mainly looking for just the DDA core?
+
+You said:
+yes please
+ChatGPT said:
+
+Perfect — let’s wire the DDA ray-caster into a full “Wolfenstein” style projection loop.
+
+The basic camera model:
+
+Player has a position (posX, posY) and a direction vector (dirX, dirY).
+
+You also need a perpendicular camera plane (planeX, planeY) that defines the field of view.
+
+Typical setup: dirX=1, dirY=0 and planeX=0, planeY=0.66 → ~66° FOV.
+
+Then, for each screen column x, you build a ray direction, cast it with DDA, and draw the vertical stripe.
+
+Here’s a skeleton in JavaScript:
+
+function renderFrame(ctx, screenWidth, screenHeight, grid, posX, posY, dirX, dirY, planeX, planeY, textures) {
+  for (let x = 0; x < screenWidth; x++) {
+    // cameraX: -1 on left side, +1 on right side of screen
+    const cameraX = 2 * x / screenWidth - 1;
+    const rayDirX = dirX + planeX * cameraX;
+    const rayDirY = dirY + planeY * cameraX;
+
+    // Cast ray using our DDA function
+    const hit = castRay(grid, posX, posY, rayDirX, rayDirY);
+    if (!hit) continue; // nothing hit (out of bounds)
+
+    const { distance, side, textureX, mapX, mapY } = hit;
+
+    // Projected wall height (avoid div by zero)
+    const lineHeight = Math.floor(screenHeight / (distance || 0.0001));
+
+    // Draw start and end of wall stripe
+    let drawStart = Math.floor(-lineHeight / 2 + screenHeight / 2);
+    let drawEnd   = Math.floor(lineHeight / 2 + screenHeight / 2);
+    if (drawStart < 0) drawStart = 0;
+    if (drawEnd >= screenHeight) drawEnd = screenHeight - 1;
+
+    // Pick texture (here grid value decides which texture)
+    const tex = textures[grid[mapY][mapX] % textures.length];
+    const texWidth = tex.width, texHeight = tex.height;
+
+    // X coord on texture
+    let texX = Math.floor(textureX * texWidth);
+    if (side === 0 && rayDirX > 0) texX = texWidth - texX - 1;
+    if (side === 1 && rayDirY < 0) texX = texWidth - texX - 1;
+
+    // Draw vertical stripe from texture
+    const column = ctx.getImageData(texX, 0, 1, texHeight); // one column
+    for (let y = drawStart; y < drawEnd; y++) {
+      // Map screen y to texture y
+      const d = y * 256 - screenHeight * 128 + lineHeight * 128;
+      const texY = Math.floor(((d * texHeight) / lineHeight) / 256);
+      const texIndex = (texY * texWidth + texX) * 4;
+
+      const r = column.data[texIndex];
+      const g = column.data[texIndex + 1];
+      const b = column.data[texIndex + 2];
+      const a = column.data[texIndex + 3];
+
+      // Simple shading: darken if y-side
+      const shade = side === 1 ? 0.7 : 1.0;
+
+      ctx.fillStyle = `rgba(${r * shade}, ${g * shade}, ${b * shade}, ${a / 255})`;
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+}
+
+What’s happening:
+
+Camera math
+Each screen column x corresponds to a ray direction via (dirX + planeX*cameraX, dirY + planeY*cameraX).
+
+Ray casting
+Calls the castRay function from earlier.
+
+Projection
+Wall height = screenHeight / distance.
+
+Texturing
+
+textureX = fractional hit location along the wall.
+
+Flipped if hitting certain wall sides.
+
+Then we stretch the vertical texture column to fit the projected wall height.
+
+Shading
+Optional: darken walls hit on y-sides to fake lighting.
+
+This is enough to render Wolfenstein-style walls! 🚀
+
+👉 Do you want me to also show you how to manage floor/ceiling rendering (raycasting them too, or using vertical interpolation), or do you only need walls for now?
