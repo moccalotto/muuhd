@@ -397,21 +397,13 @@ export class FirstPersonRenderer {
                 // appear first in the array,
                 // enabling us to simply draw from back to front
                 const collision = new RayCollision();
-                result.collisions.unshift(collision);
-
                 collision.mapX = mapX;
                 collision.mapY = mapY;
                 collision.rayLength = rayLength;
                 collision.tile = tile;
                 collision.sampleU = sampleU;
                 collision.side = side;
-                if (result.sprite) {
-                    collision.sprite = true;
-                }
-                if (result.wall) {
-                    collision.wall = true;
-                    return;
-                }
+                result.collisions.unshift(collision);
             }
 
             //
@@ -421,17 +413,6 @@ export class FirstPersonRenderer {
             // --------------------------
             if (tile.wall) {
                 result.hitWall = true;
-
-                // <todo>
-                // DELETE BELOW
-                result.wallCollision.tile = tile;
-                result.wallCollision.side = side;
-
-                result.wallCollision.mapX = mapX;
-                result.wallCollision.mapY = mapY;
-                result.wallCollision.rayLength = rayLength;
-                result.wallCollision.sampleU = sampleU;
-                // </todo>
                 return result;
             }
         }

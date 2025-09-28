@@ -121,8 +121,6 @@ class DungeonCrawler {
 
         this.setupControls();
         this.loadMap();
-        this.render(this.player.x, this.player.y, this.player.orientation * PI_OVER_TWO);
-        this.renderCompass();
 
         //
         // Start the game loop
@@ -173,13 +171,12 @@ class DungeonCrawler {
         textureUrls.forEach((url, textureId) => {
             Texture.fromSource(url).then((texture) => {
                 textures[textureId] = texture;
-
-                if (textureLoadCount > textureUrls.length) {
-                    return;
-                }
-
+                console.log("here", { textureId, texture, textures });
                 textureLoadCount++;
 
+                if (textureLoadCount < textureUrls.length) {
+                    return;
+                }
                 this.rendering.firstPersonRenderer = new FirstPersonRenderer(
                     this.rendering.firstPersonWindow,
                     this.map,
@@ -188,8 +185,9 @@ class DungeonCrawler {
                 );
                 this.render();
                 this.renderMinimap();
+                this.renderCompass();
 
-                console.debug("renderer ready", texture);
+                console.debug("renderer ready", textures);
             });
         });
     }

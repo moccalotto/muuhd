@@ -32,6 +32,10 @@ export class Tile {
             }
         }
     }
+
+    get isCollision() {
+        return this.wall || this.sprite;
+    }
 }
 
 export const defaultLegend = Object.freeze({
