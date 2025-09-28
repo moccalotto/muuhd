@@ -1,16 +1,22 @@
 import { Vector2i, Orientation, RelativeMovement, PI_OVER_TWO } from "./ascii_types.js";
-import { FirstPersonRenderer } from "./ascii_first_person_renderer.js";
+import { DefaultRendererOptions, FirstPersonRenderer } from "./ascii_first_person_renderer.js";
 import { MiniMapRenderer } from "../ascii_minimap_renderer.js";
 import { Texture } from "./ascii_textureloader.js";
 import { AsciiWindow } from "./ascii_window.js";
 import { TileMap } from "./ascii_tile_map.js";
 import eobWallUrl1 from "./eob1.png";
-import eobWallUrl2 from "./eob2.png";
+import gnollSpriteUrl from "./gnoll.png";
 import { sprintf } from "sprintf-js";
 
 class Player {
+    /** @protected */
     _posV = new Vector2i();
+
+    /** @protected */
     _directionV = new Vector2i(0, 1);
+
+    /** @type {number} number of milliseconds to sleep before next gameLoop.  */
+    delay = 0;
 
     get x() {
         return this._posV.x;
@@ -75,11 +81,6 @@ class DungeonCrawler {
     }
 
     constructor() {
-        /** @type {number} Number of times per second we poll for controller inputs */
-        this.pollsPerSec = 60;
-        /** @type {number} */
-        this.debounce = 0;
-
         /** @constant @readonly */
         this.keys = {
             /** @constant @readonly */
@@ -106,46 +107,50 @@ class DungeonCrawler {
 
         /** @readonly */
         this.rendering = {
-            enabled: true,
-            ticker: 0,
-            maxDepth: 5,
-            fov: Math.PI / 3, // 60 degrees, increase maybe?
-            view: new AsciiWindow(document.getElementById("viewport"), 120, 50),
+            /** @type {FirstPersonRenderer} */ firstPersonRenderer: null,
+            /** @type {MiniMapRenderer}     */ miniMapRenderer: null,
 
-            /** @type {FirstPersonRenderer} */
-            renderer: null,
+            firstPersonWindow: new AsciiWindow(document.getElementById("viewport"), 100, 45), // MAGIC CONSTANTS
+            minimapWindow: new AsciiWindow(document.getElementById("minimap"), 9, 9), // MAGIC CONSTANT
+
+            options: DefaultRendererOptions,
         };
 
         /** @readonly @type {MiniMapRenderer} */
-        this.minimap;
-
-        /**
-         * @typedef Player
-         * @type {object}
-         * @property {number} x integer. Player's x-coordinate on the grid.
-         * @property {number} y integer. Player's y-coordinate on the grid.
-         */
         this.player = new Player();
 
         this.setupControls();
-
         this.loadMap();
-        this.updateCompass();
-        this.rendering.view.commitToDOM();
         this.render(this.player.x, this.player.y, this.player.orientation * PI_OVER_TWO);
+        this.renderCompass();
+
+        //
+        // Start the game loop
+        //
         this.gameLoop();
     }
 
-    render(posX = this.player.x, posY = this.player.y, angle = this.player.angle) {
-        if (!this.rendering.renderer) {
+    /**
+     * Render a first person view of the camera in a given position and orientation.
+     *
+     * @param {number} camX the x-coordinate of the camera (in map coordinates)
+     * @param {number} camY the y-coordinate of the camera (in map coordinates)
+     * @param {number} angle the orientation of the camera in radians around the unit circle.
+     */
+    render(camX = this.player.x, camY = this.player.y, angle = this.player.angle) {
+        if (!this.rendering.firstPersonRenderer) {
             console.log("Renderer not ready yet");
             return;
         }
-        this.rendering.renderer.renderFrame(
-            posX + 0.5, // add .5 to get camera into center of cell
-            posY + 0.5, // add .5 to get camera into center of cell
+        this.rendering.firstPersonRenderer.renderFrame(
+            camX + 0.5, // add .5 to get camera into center of cell
+            camY + 0.5, // add .5 to get camera into center of cell
             angle,
         );
+    }
+
+    renderMinimap() {
+        this.rendering.miniMapRenderer.draw(this.player.x, this.player.y, this.player.orientation);
     }
 
     loadMap() {
@@ -154,36 +159,35 @@ class DungeonCrawler {
         this.map = TileMap.fromText(mapString);
 
         this.player._posV = this.map.findFirst({ startLocation: true });
+
         if (!this.player._posV) {
             throw new Error("Could not find a start location for the player");
         }
-        console.log(this.map.getAreaAround(this.player.x, this.player.y, 5).toString());
 
-        const minimapElement = document.getElementById("minimap");
-        const minimapWindow = new AsciiWindow(minimapElement, 9, 9); // MAGIC NUMBERS: width and height of the minimap
-        this.minimap = new MiniMapRenderer(minimapWindow, this.map);
+        this.rendering.miniMapRenderer = new MiniMapRenderer(this.rendering.minimapWindow, this.map);
 
-        const textureUrls = [eobWallUrl1, eobWallUrl2];
-        const textureCount = textureUrls.length;
-        const textures = [];
+        const textureUrls = [eobWallUrl1, gnollSpriteUrl];
+        const textures = new Array(textureUrls.length).fill();
+        let textureLoadCount = 0;
 
-        textureUrls.forEach((url) => {
+        textureUrls.forEach((url, textureId) => {
             Texture.fromSource(url).then((texture) => {
-                textures.push(texture);
+                textures[textureId] = texture;
 
-                if (textures.length < textureCount) {
+                if (textureLoadCount > textureUrls.length) {
                     return;
                 }
 
-                this.rendering.renderer = new FirstPersonRenderer(
-                    this.rendering.view,
+                textureLoadCount++;
+
+                this.rendering.firstPersonRenderer = new FirstPersonRenderer(
+                    this.rendering.firstPersonWindow,
                     this.map,
-                    this.rendering.fov,
-                    this.rendering.maxDepth,
                     textures,
+                    this.rendering.options,
                 );
                 this.render();
-                this.minimap.draw(this.player.x, this.player.y, this.player.orientation);
+                this.renderMinimap();
 
                 console.debug("renderer ready", texture);
             });
@@ -213,7 +217,6 @@ class DungeonCrawler {
 
         //
         this.player._directionV.rotateCCW(quarterTurns);
-        this.updateCompass();
     }
 
     /** @type {RelativeMovement} Direction the player is going to move */
@@ -231,14 +234,14 @@ class DungeonCrawler {
         //
         // We cant move into walls
         if (this.map.isWall(targetV.x, targetV.y)) {
-            this.debounce = (this.pollsPerSec / 5) | 0;
             console.info(
                 "bumped into wall at %s (mypos: %s), direction=%d",
                 targetV,
                 this.player._posV,
                 this.player.angle,
             );
-            return;
+            this.delay += 250; // MAGIC NUMBER: Pause for a tenth of a second after hitting a wall
+            return false;
         }
 
         this.animation = {
@@ -254,7 +257,7 @@ class DungeonCrawler {
         };
         this.player._posV = targetV;
 
-        this.updateCompass(); // technically not necessary, but Im anticipating the need + compensating for my bad memory.
+        return true;
     }
 
     setupControls() {
@@ -291,50 +294,39 @@ class DungeonCrawler {
             },
             true,
         );
-
-        const ticks = Math.round(1000 / this.pollsPerSec);
-        this.keys.interval = setInterval(() => {
-            this.handleKeyboardInput();
-        }, ticks);
     }
 
     handleKeyboardInput() {
-        if (this.debounce > 0) {
-            this.debounce--;
-            return;
-        }
-
-        if (this.isAnimating) {
-            return;
-        }
-
         //
         // Check each key we can handle.
         for (let key of this.keys.names) {
             if (this.keys.pressed[key]) {
-                this.debounce = Math.floor(this.animation.fps * this.animation.animationDuration) - 1;
                 const keyHandler = this.keys.handlers[key];
-                keyHandler();
-                return;
+                return keyHandler();
             }
         }
+        return false;
     }
 
+    /**
+     * @returns {boolean} true if an animation is in progress
+     */
     handleAnimation() {
         //
         // Guard: only animate if called for
         if (!this.isAnimating) {
             this.animation = {};
-            return;
+            return false;
         }
 
         //
-        // Guard, stop animation if it took too long
+        // Guard: stop animation if it took too long
         if (this.animation.targetTime <= performance.now()) {
             this.render(this.player.x, this.player.y, this.player.angle);
+            this.renderMinimap();
+            this.renderCompass();
             this.animation = {};
-            this.minimap.draw(this.player.x, this.player.y, this.player.orientation);
-            return;
+            return false;
         }
 
         const a = this.animation;
@@ -344,44 +336,68 @@ class DungeonCrawler {
         const animX = a.targetX - a.startX; // how much this animation causes us to move in the x-direction
         const animA = a.targetAngle - a.startAngle; // how much this animation causes us to rotate in total
         const animT = a.targetTime - a.startTime; // how long (in ms) this animation is supposed to take.
-
-        const deltaT = (nowT - a.startTime) / animT;
-        if (deltaT > 1) {
-            throw new Error("Not supposed to happen!");
-        }
+        const progress = Math.min((nowT - a.startTime) / animT, 1);
 
         // render
         this.render(
-            a.startX + animX * deltaT, //
-            a.startY + animY * deltaT, //
-            a.startAngle + animA * deltaT, //
+            a.startX + animX * progress, //
+            a.startY + animY * progress, //
+            a.startAngle + animA * progress, //
         );
+
+        return true;
     }
 
     gameLoop() {
         //
-        // We're not animating, so we chill out for 50 msec
-        if (!this.isAnimating) {
-            setTimeout(() => this.gameLoop(), 50); // MAGIC NUMBER
+        // Has something in the game logic told us to chill out?
+        //
+        if (this.delay) {
+            setTimeout(() => this.gameLoop(), this.delay);
+            this.delay = 0;
             return;
         }
 
-        this.handleAnimation();
+        //
+        // Are we animating ?
+        // Then render a single frame, and then chill out for 20ms.
+        // Do not process keyboard input while animating
+        //
+        if (this.handleAnimation()) {
+            setTimeout(() => this.gameLoop(), 20);
+            return;
+        }
 
-        requestAnimationFrame(() => this.gameLoop());
+        //
+        // Has a key been pressed that we need to react to?
+        // Then queue up a new gameLoop call to be executed
+        // as soon as possible.
+        //
+        // NOTE: this happens inside a microtask to ensure
+        // that the call stack does not get too big and that
+        // each single call to gameLoop does not take too
+        // long
+        //
+        if (this.handleKeyboardInput()) {
+            queueMicrotask(() => this.gameLoop());
+            return;
+        }
+
+        //
+        // Are we idling?
+        // Then only check for new events every 20ms to use less power
+        //
+        setTimeout(() => this.gameLoop(), 50); // MAGIC NUMBER
     }
 
-    updateCompass() {
+    renderCompass() {
         //
         //
         // Update the compass
-        document.getElementById("compass").textContent = sprintf(
-            "%s %s (%d --> %.2f [%dº])",
+        document.getElementById("compass").innerHTML = sprintf(
+            "<div>%s</div><div>%s</div>",
             this.player._posV,
             Object.keys(Orientation)[this.player.orientation].toLowerCase(),
-            this.player.orientation,
-            this.player.orientation * PI_OVER_TWO,
-            this.player.orientation * 90,
         );
     }
 }

@@ -1,20 +1,6 @@
-/**
- * @typedef {object} NormalizedPixel
- * @property {number} r value [0...1]
- * @property {number} g value [0...1]
- * @property {number} b value [0...1]
- * @property {number} a value [0...1]
- *
- * @typedef {object} Pixel
- * @property {number} r value [0...255]
- * @property {number} g value [0...255]
- * @property {number} b value [0...255]
- * @property {number} a value [0...255]
- */
-
 export class NRGBA {
     //
-    constructor(r = 0, g = 0, b = 0, a = 0) {
+    constructor(r = 0, g = 0, b = 0, a = 1) {
         this.r = r;
         this.g = g;
         this.b = b;
@@ -25,6 +11,10 @@ export class NRGBA {
         this.r *= factor;
         this.g *= factor;
         this.b *= factor;
+    }
+
+    mulledRGB(factor) {
+        return new NRGBA(this.r * factor, this.g * factor, this.b * factor, this.a);
     }
 
     get dR() {

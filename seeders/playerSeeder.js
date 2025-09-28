@@ -1,5 +1,4 @@
 import { gGame } from "../models/globals.js";
-import { Player } from "../models/player.js";
 
 export class PlayerSeeder {
     seed() {

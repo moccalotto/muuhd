@@ -2,18 +2,29 @@ import { Vector2i, Orientation } from "./ascii_types.js";
 import { AsciiWindow } from "./ascii_window.js";
 import { Texture } from "./ascii_textureloader.js";
 
-class Tile {
+export class Tile {
     /** @type {string} How should this tile be rendered on the minimap.*/
-    minimap = " ";
+    minimapChar = " ";
+
+    /** @type {string} How should this tile be rendered on the minimap.*/
+    minimapColor = "#fff";
+
     /** @type {boolean} Should this be rendered as a wall? */
     wall = false;
+
+    /** @type {boolean} is this tile occupied by a sprite? */
+    sprite = false;
+
     /** @type {boolean} Can the player walk here? */
     traversable = true;
+
     /** @type {boolean} Is this where they player starts? */
     startLocation = false;
+
     /** @type {boolean} Is this where they player starts? */
     textureId = 0;
 
+    /** @type {Tile} options */
     constructor(options) {
         for (let [k, v] of Object.entries(options)) {
             if (this[k] !== undefined) {
@@ -25,39 +36,49 @@ class Tile {
 
 export const defaultLegend = Object.freeze({
     //
+    // "" is the Unknown Tile - if we encounter a tile that we don't know how to parse,
+    // the it will be noted here as the empty string
+    "": new Tile({
+        minimapChar: " ",
+        traversable: true,
+        wall: false,
+    }),
+
+    //
     // default floor
     " ": new Tile({
-        minimap: " ",
+        minimapChar: " ",
         traversable: true,
         wall: false,
     }),
     //
     // Default wall
     "#": new Tile({
-        minimap: "#",
+        minimapChar: "#",
         traversable: false,
         wall: true,
         textureId: 0,
     }),
+
+    "M": new Tile({
+        textureId: 1,
+        minimapChar: "M",
+        minimapColor: "#f00",
+        traversable: false,
+        wall: false,
+    }),
+
     //
     //secret door (looks like wall, but is traversable)
     "Ω": new Tile({
-        minimap: "#",
+        minimapChar: "#",
         traversable: true,
         wall: true,
     }),
     //
-    // "" is the Unknown Tile - if we encounter a tile that we don't know how to parse,
-    // the it will be noted here as the empty string
-    "": new Tile({
-        minimap: " ",
-        traversable: true,
-        wall: false,
-    }),
-    //
     // where the player starts
     "S": new Tile({
-        minimap: "S", // "Š",
+        minimapChar: "S", // "Š",
         traversable: true,
         wall: false,
         startLocation: true,
@@ -101,6 +122,16 @@ export class TileMap {
         return new TileMap(longestLine, lines.length, tiles);
     }
 
+    tileIdx(x, y) {
+        return y * this.width + x;
+    }
+
+    getByIdx(idx) {
+        const y = Math.floor(idx / this.width);
+        const x = idx % this.width;
+        return this.tiles[y][x];
+    }
+
     /**
      * @param {number} width
      * @param {number} height
@@ -122,7 +153,7 @@ export class TileMap {
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
                 const tile = this.tiles[y][x];
-                result += tile.minimap;
+                result += tile.minimapChar;
             }
             result += "\n";
         }

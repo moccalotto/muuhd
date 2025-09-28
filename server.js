@@ -46,8 +46,8 @@ class MudServer {
         websocket.on("close", () => {
             try {
                 this.close(session);
-            } catch (e) {
-                console.error("Failed during closing of websocket");
+            } catch (error) {
+                console.error("Failed during closing of websocket", { error });
             }
         });
 
@@ -75,8 +75,11 @@ class MudServer {
     //
     //----------------------------------------------------------
     start() {
-        //
-        // The file types we allow to be served.
+        /**
+         * The file types we allow to be served.
+         *
+         * @type {Record<string,string>}
+         */
         const contentTypes = {
             ".css": "text/css",
             ".html": "text/html",
@@ -87,8 +90,11 @@ class MudServer {
             ".png": "image/png",
         };
 
-        //
-        // Create HTTP server for serving the client - Consider moving to own file
+        /**
+         * HTTP server for serving the MUDClient.
+         *
+         * NOTE: Consider moving to own file
+         */
         const httpServer = http.createServer((req, res) => {
             let filePath = path.join("public", req.url === "/" ? "index.html" : req.url);
             const ext = path.extname(filePath);
@@ -119,15 +125,17 @@ class MudServer {
             });
         });
 
-        //
-        // Create WebSocket server
+        /**
+         * WebSocket Server for serving the MUDClient.
+         *
+         * NOTE: Consider moving to separate file
+         */
         const websocketServer = new WebSocketServer({ server: httpServer });
 
         websocketServer.on("connection", (ws) => {
             this.onConnectionEstabished(ws);
         });
 
-        console.info(`Environment: ${Config.env}`);
         httpServer.listen(Config.port, () => {
             console.info(`NUUHD server running on port ${Config.port}`);
         });
@@ -210,14 +218,17 @@ class MudServer {
         console.warn("Unknown message type: >>%s<<", msgObj.type, msgObj);
     }
 
-    //   ____ _     ___  ____  _____
-    //  / ___| |   / _ \/ ___|| ____|
-    // | |   | |  | | | \___ \|  _|
-    // | |___| |__| |_| |___) | |___
-    //  \____|_____\___/|____/|_____|
-    //-------------------------------
-    // Handle Socket Closing
-    //----------------------
+    /**   ____ _     ___  ____  _____
+     *   / ___| |   / _ \/ ___|| ____|
+     *  | |   | |  | | | \___ \|  _|
+     *  | |___| |__| |_| |___) | |___
+     *   \____|_____\___/|____/|_____|
+     * -------------------------------
+     *  Handle Socket Closing
+     * ----------------------
+     *
+     * @param {Session} session
+     */
     close(session) {
         const playerName = session.player ? session.player.username : "[unauthenticated]";
         console.info(playerName + " disconnected");
@@ -233,5 +244,19 @@ class MudServer {
 //---------------------------
 // Code entry point
 //-----------------
+
+console.info(`Environment: ${Config.env}`);
+
 const mudserver = new MudServer(/* location of crypto key for saving games */);
 mudserver.start();
+
+//
+//  ____ _____ _____ _   _   _     _           _       _
+// / ___|_   _|  ___| | | | | |   (_)_ __   __| | __ _| |
+// \___ \ | | | |_  | | | | | |   | | '_ \ / _` |/ _` | |
+//  ___) || | |  _| | |_| | | |___| | | | | (_| | (_| |_|
+// |____/ |_| |_|    \___/  |_____|_|_| |_|\__,_|\__,_(_)
+//
+if (Math.PI < 0 && WebSocket) {
+    ("STFU Linda");
+}

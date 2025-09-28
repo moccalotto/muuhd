@@ -1,13 +1,13 @@
-export class Pixel {
+export class PseudoPixel {
     /**
-     * @param {HTMLElement} el
+     * @param {HTMLElement} htmlElement
      * @param {string} char
      * @param {number|string} color text/foreground color
      */
-    constructor(el, char = " ", color = "#fff") {
+    constructor(htmlElement, char = " ", color = "#fff") {
         //
         /** @type {HTMLElement} el the html element that makes up this cell*/
-        this.el = el;
+        this.htmlElement = htmlElement;
 
         /** @type {string} char */
         this.char = char;
@@ -15,25 +15,28 @@ export class Pixel {
         /** @type {number|string} fg color color */
         this.color = color;
 
-        /** @type {boolean} Has this pixel been updated since it was flushed to DOM ? */
-        this.dirty = true;
+        /** @type {boolean} Has this pixel's text content been updated since it was flushed to DOM ? */
+        this.dirtyChar = true;
+
+        /** @type {boolean} Has this pixel's color been updated since it was flushed to DOM ? */
+        this.dirtyColor = true;
     }
 
     clone() {
-        return new Pixel(this.el, this.car, this.color);
+        return new PseudoPixel(this.htmlElement, this.car, this.color);
     }
 }
 
 export class AsciiWindow {
     /**
-     * @param {HTMLElement} container
+     * @param {HTMLElement} htmlElement the html element that contains all the pseudo-pixel elements
      * @param {number} width Canvas width  (in pseudo-pixels)
      * @param {number} height Canvas height (in pseudo-pixels)
      */
-    constructor(container, width, height) {
+    constructor(htmlElement, width, height) {
         //
-        /** @type {HTMLElement} Paren element that contains all the pseudo-pixels */
-        this.container = container;
+        /** @type {HTMLElement} the html element that contains all the pseudo-pixels */
+        this.htmlElement = htmlElement;
 
         /** @type {number} width Canvas width  (in pseudo-pixels) */
         this.width = width;
@@ -41,8 +44,8 @@ export class AsciiWindow {
         /** @type {number} height Canvas height (in pseudo-pixels) */
         this.height = height;
 
-        /** @type {Pixel[]} */
-        this.canvas = [];
+        /** @type {PseudoPixel[]} */
+        this.pseudoPixels = [];
 
         this.initializeCanvaas();
     }
@@ -56,18 +59,18 @@ export class AsciiWindow {
         const w = this.width;
         const h = this.height;
 
-        this.canvas = new Array(w * h).fill();
+        this.pseudoPixels = new Array(w * h).fill();
 
         let i = 0;
         for (let y = 0; y < h; y++) {
             const rowEl = document.createElement("div");
-            this.container.appendChild(rowEl);
+            this.htmlElement.appendChild(rowEl);
 
             for (let x = 0; x < w; x++) {
                 const pixelEl = document.createElement("code");
                 rowEl.appendChild(pixelEl);
                 pixelEl.textContent = " ";
-                this.canvas[i] = new Pixel(pixelEl, " ", "#fff");
+                this.pseudoPixels[i] = new PseudoPixel(pixelEl, " ", "#fff");
                 i++;
             }
         }
@@ -88,17 +91,17 @@ export class AsciiWindow {
         this.mustBeWithinBounds(x, y);
         const idx = this.width * y + x;
 
-        const pixel = this.canvas[idx];
+        const pixel = this.pseudoPixels[idx];
 
         // Check for changes in text contents
         if (char !== undefined && char !== null && char !== pixel.char) {
             pixel.char = char;
-            pixel.dirty = true;
+            pixel.dirtyChar = true;
         }
 
         if (color !== undefined && color !== null && color !== pixel.color) {
             pixel.color = color;
-            pixel.dirty = true;
+            pixel.dirtyColor = true;
         }
     }
 
@@ -108,14 +111,15 @@ export class AsciiWindow {
      * @return {number} number of DOM updates made
      */
     commitToDOM() {
-        this.canvas.forEach((pixel) => {
-            if (!pixel.dirty) {
-                return;
+        this.pseudoPixels.forEach((pixel) => {
+            if (pixel.dirtyChar) {
+                pixel.htmlElement.textContent = pixel.char;
+                pixel.dirtyChar = false;
             }
-
-            pixel.el.textContent = pixel.char;
-            pixel.el.style.color = pixel.color;
-            pixel.dirty = false;
+            if (pixel.dirtyColor) {
+                pixel.htmlElement.style.color = pixel.color;
+                pixel.dirtyColor = false;
+            }
         });
     }
 }

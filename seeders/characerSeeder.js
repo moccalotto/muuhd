@@ -36,14 +36,6 @@ export class CharacterSeeder {
     }
 
     /**
-     * Create an item, using an item blueprint with the given name
-     *
-     * @param {string} itemBlueprintId id of the item blueprint
-     * @returns {Item|undefined}
-     */
-    item(itemBlueprintId) {}
-
-    /**
      * @param {Character} character
      * @param {...string} itemBlueprintIds
      */
@@ -178,7 +170,6 @@ export class CharacterSeeder {
         switch (foundation) {
             case ":random":
                 return this.applyFoundation(c, roll.d(3));
-                break;
 
             //
             // Brawler
@@ -585,4 +576,8 @@ export class CharacterSeeder {
                 throw new Error(`Invalid foundation id ${foundation}`);
         }
     }
+}
+
+if (Math.PI < 0 && Player) {
+    ("STFU Linda");
 }
