@@ -142,23 +142,16 @@ export class FirstPersonRenderer {
         const screenWidth = this.window.width;
 
         /** @type {Map<number,Tile} The coordinates of all the tiles checked while rendering this frame*/
-        const coordsCheckedFrame = new Map();
+        const coordsChecked = new Map();
 
         for (let x = 0; x < screenWidth; x++) {
-            /** @type {Map<number,Tile} The coordinates of all the tiles checked while casting this single ray*/
-            const coordsCheckedRay = new Map();
-
             const angleOffset = (x / screenWidth - 0.5) * this.fov; // in radians
             const rayAngle = dirAngle + angleOffset;
             const rayDirX = Math.cos(rayAngle);
             const rayDirY = Math.sin(rayAngle);
 
             // Cast ray using our DDA function
-            const ray = this.castRay(posX, posY, rayDirX, rayDirY, coordsCheckedRay);
-
-            coordsCheckedRay.forEach((tile, idx) => {
-                coordsCheckedFrame.set(idx, tile);
-            });
+            const ray = this.castRay(posX, posY, rayDirX, rayDirY, coordsChecked);
 
             //
             // Render a single screen column
@@ -195,83 +188,97 @@ export class FirstPersonRenderer {
      * @protected
      */
     renderColumn(x, ray, rayDirX, rayDirY, angleOffset) {
+        // //
+        // // Check if we hit anything at all
+        // if (ray.collisions.length === 0) {
+        //     //
+        //     // We didn't hit anything. Just paint floor, wall, and darkness
+        //     for (let y = 0; y < this.window.height; y++) {
+        //         const [char, color] = this.shades[y];
+        //         this.window.put(x, y, char, color);
+        //     }
+        //     return;
+        // }
         //
-        // Check if we hit anything at all
-        if (ray.collisions.length === 0) {
-            //
-            // We didn't hit anything. Just paint floor, wall, and darkness
-            for (let y = 0; y < this.window.height; y++) {
-                const [char, color] = this.shades[y];
-                this.window.put(x, y, char, color);
-            }
-            return;
+        // // ALTERNATIVE always paint floor and ceiling
+        for (let y = 0; y < this.window.height; y++) {
+            const [char, color] = this.shades[y];
+            this.window.put(x, y, char, color);
         }
 
-        const { rayLength, side, sampleU, tile: wallTile } = ray.collisions[0];
+        for (const { rayLength, side, sampleU, tile } of ray.collisions) {
+            let distance = Math.max(rayLength * Math.cos(angleOffset), 1e-12); // Avoid divide by zero
 
-        const distance = Math.max(rayLength * Math.cos(angleOffset), 1e-12); // Avoid divide by zero
-
-        //
-        // Calculate perspective.
-        //
-        const screenHeight = this.window.height;
-        const lineHeight = Math.round(screenHeight / distance); // using round() because floor() gives aberrations when distance == (n + 0.500)
-        const halfScreenHeight = screenHeight / 2;
-        const halfLineHeight = lineHeight / 2;
-
-        let minY = Math.floor(halfScreenHeight - halfLineHeight);
-        let maxY = Math.floor(halfScreenHeight + halfLineHeight);
-        let unsafeMinY = minY; // can be lower than zero - it happens when we get so close to a wall we cannot see top or bottom
-
-        if (minY < 0) {
-            minY = 0;
-        }
-        if (maxY >= screenHeight) {
-            maxY = screenHeight - 1;
-        }
-
-        //
-        // Pick texture (here grid value decides which texture)
-        //
-        const wallTexture = this.textures[wallTile.textureId];
-
-        for (let y = 0; y < screenHeight; y++) {
             //
-            // Are we hitting the ceiling?
+            // Calculate perspective.
             //
-            if (y < minY || y > maxY) {
-                const [char, color] = this.shades[y];
-                this.window.put(x, y, char, color);
-                continue;
+            const screenHeight = this.window.height;
+            const lineHeight = Math.round(screenHeight / distance); // using round() because floor() gives aberrations when distance == (n + 0.500)
+            const halfScreenHeight = screenHeight / 2;
+            const halfLineHeight = lineHeight / 2;
+
+            let minY = Math.floor(halfScreenHeight - halfLineHeight);
+            let maxY = Math.floor(halfScreenHeight + halfLineHeight);
+            let unsafeMinY = minY; // can be lower than zero - it happens when we get so close to a wall we cannot see top or bottom
+
+            if (minY < 0) {
+                minY = 0;
             }
-            if (y === minY) {
-                this.window.put(x, y, "m", "#0F0");
-                continue;
-            }
-            if (y === maxY) {
-                this.window.put(x, y, "M", "#F00");
-                continue;
+            if (maxY >= screenHeight) {
+                maxY = screenHeight - 1;
             }
 
             //
-            // Map screen y to texture y
-            let sampleV = (y - unsafeMinY) / lineHeight; // y- coordinate of the texture point to sample
-
-            const color = wallTexture.sample(sampleU, sampleV);
-
+            // Pick texture (here grid value decides which texture)
             //
-            // North-south walls are shaded differently from east-west walls
-            let shade = side === Side.X_AXIS ? 0.8 : 1.0; // MAGIC NUMBERS
+            const texture = this.textures[tile.textureId];
 
-            //
-            // Dim walls that are far away
-            const lightLevel = 1 - rayLength / this.viewDistance;
+            for (let y = 0; y < screenHeight; y++) {
+                //
+                // Are we hitting the ceiling?
+                //
+                if (y < minY || y > maxY) {
+                    const [char, color] = this.shades[y];
+                    this.window.put(x, y, char, color);
+                    continue;
+                }
+                // // DEBUG LINES
+                // if (y === minY) {
+                //     this.window.put(x, y, "m", "#0F0");
+                //     continue;
+                // }
+                // if (y === maxY) {
+                //     this.window.put(x, y, "M", "#F00");
+                //     continue;
+                // }
 
-            //
-            // Darken the image
-            color.mulRGB(shade * lightLevel);
+                //
+                // Map screen y to texture y
+                let sampleV = (y - unsafeMinY) / lineHeight; // y- coordinate of the texture point to sample
 
-            this.window.put(x, y, this.wallChar, color.toCSS());
+                const color = texture.sample(sampleU, sampleV);
+                if (!Number.isFinite(color.a)) {
+                    throw new Error("Waaat");
+                }
+
+                if (color.a === 0) {
+                    continue;
+                }
+
+                //
+                // North-south walls are shaded differently from east-west walls
+                let shade = side === Side.X_AXIS ? 0.8 : 1.0; // MAGIC NUMBERS
+
+                //
+                // Dim walls that are far away
+                const lightLevel = 1 - rayLength / this.viewDistance;
+
+                //
+                // Darken the image
+                color.mulRGB(shade * lightLevel);
+
+                this.window.put(x, y, tile.sprite ? "#" : this.wallChar, color.toCSS()); // MAGIC CONSTANT "S"
+            }
         }
     }
 
@@ -382,35 +389,37 @@ export class FirstPersonRenderer {
             const tile = this.map.get(mapX, mapY);
             coordsChecked.set(this.map.tileIdx(mapX, mapY), tile);
 
+            //
+            // --------------------------
+            // No collision? Move on
+            // --------------------------
+            if (!tile.collision) {
+                continue;
+            }
+
             const rayLength = Math.hypot(
                 wallDist * dirX, //
                 wallDist * dirY, //
             );
 
             //
-            // --------------------------
-            // Add a Sprite to the result
-            // --------------------------
-            if (tile.sprite || tile.wall) {
-                //
-                // Prepend the element to the array so rear-most sprites
-                // appear first in the array,
-                // enabling us to simply draw from back to front
-                const collision = new RayCollision();
-                collision.mapX = mapX;
-                collision.mapY = mapY;
-                collision.rayLength = rayLength;
-                collision.tile = tile;
-                collision.sampleU = sampleU;
-                collision.side = side;
-                result.collisions.unshift(collision);
-            }
+            // Prepend the element to the array so rear-most sprites
+            // appear first in the array,
+            // enabling us to simply draw from back to front
+            const collision = new RayCollision();
+            collision.mapX = mapX;
+            collision.mapY = mapY;
+            collision.rayLength = rayLength;
+            collision.tile = tile;
+            collision.sampleU = sampleU;
+            collision.side = side;
+            result.collisions.unshift(collision);
 
             //
-            // --------------------------
-            // Add a Wall to the result
-            //  (and return)
-            // --------------------------
+            // --------------------------------
+            // Algorithm stops if the ray hits
+            // a wall.
+            // -------------------------------
             if (tile.wall) {
                 result.hitWall = true;
                 return result;

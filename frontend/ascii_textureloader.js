@@ -92,14 +92,14 @@ export class Texture {
      * @returns {NRGBA}
      */
     sample(u, v) {
-        const x = Math.round(u * this.width);
-        const y = Math.round(v * this.height);
+        const x = Math.min(this.width - 1, Math.round(u * this.width));
+        const y = Math.min(this.height - 1, Math.round(v * this.height));
         const index = (y * this.width + x) * 4;
         return new NRGBA(
             this.data[index + 0] / 255,
             this.data[index + 1] / 255,
             this.data[index + 2] / 255,
-            1, // this.data[index + 3] / 255,
+            this.data[index + 3] / 255,
         );
     }
 }

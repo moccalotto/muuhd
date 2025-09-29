@@ -33,7 +33,7 @@ export class Tile {
         }
     }
 
-    get isCollision() {
+    get collision() {
         return this.wall || this.sprite;
     }
 }
@@ -70,6 +70,7 @@ export const defaultLegend = Object.freeze({
         minimapColor: "#f00",
         traversable: false,
         wall: false,
+        sprite: true,
     }),
 
     //

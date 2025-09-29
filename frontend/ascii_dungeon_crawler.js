@@ -171,7 +171,6 @@ class DungeonCrawler {
         textureUrls.forEach((url, textureId) => {
             Texture.fromSource(url).then((texture) => {
                 textures[textureId] = texture;
-                console.log("here", { textureId, texture, textures });
                 textureLoadCount++;
 
                 if (textureLoadCount < textureUrls.length) {
