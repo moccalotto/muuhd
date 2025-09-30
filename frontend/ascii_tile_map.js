@@ -1,6 +1,5 @@
 import { Vector2i, Orientation } from "./ascii_types.js";
 import { AsciiWindow } from "./ascii_window.js";
-import { Texture } from "./ascii_textureloader.js";
 
 export class Tile {
     /** @type {string} How should this tile be rendered on the minimap.*/
@@ -10,16 +9,16 @@ export class Tile {
     minimapColor = "#fff";
 
     /** @type {boolean} Should this be rendered as a wall? */
-    wall = false;
+    isWall = false;
 
     /** @type {boolean} is this tile occupied by a sprite? */
-    sprite = false;
+    isSprite = false;
 
     /** @type {boolean} Can the player walk here? */
     traversable = true;
 
     /** @type {boolean} Is this where they player starts? */
-    startLocation = false;
+    isStartLocation = false;
 
     /** @type {boolean} Is this where they player starts? */
     textureId = 0;
@@ -34,7 +33,7 @@ export class Tile {
     }
 
     get collision() {
-        return this.wall || this.sprite;
+        return this.isWall || this.isSprite;
     }
 }
 
@@ -45,7 +44,7 @@ export const defaultLegend = Object.freeze({
     "": new Tile({
         minimapChar: " ",
         traversable: true,
-        wall: false,
+        isWall: false,
     }),
 
     //
@@ -53,14 +52,14 @@ export const defaultLegend = Object.freeze({
     " ": new Tile({
         minimapChar: " ",
         traversable: true,
-        wall: false,
+        isWall: false,
     }),
     //
     // Default wall
     "#": new Tile({
         minimapChar: "#",
         traversable: false,
-        wall: true,
+        isWall: true,
         textureId: 0,
     }),
 
@@ -69,8 +68,8 @@ export const defaultLegend = Object.freeze({
         minimapChar: "M",
         minimapColor: "#f00",
         traversable: false,
-        wall: false,
-        sprite: true,
+        isWall: false,
+        isSprite: true,
     }),
 
     //
@@ -78,15 +77,15 @@ export const defaultLegend = Object.freeze({
     "Ω": new Tile({
         minimapChar: "#",
         traversable: true,
-        wall: true,
+        isWall: true,
     }),
     //
     // where the player starts
     "S": new Tile({
         minimapChar: "S", // "Š",
         traversable: true,
-        wall: false,
-        startLocation: true,
+        isWall: false,
+        isStartLocation: true,
     }),
 });
 
@@ -150,7 +149,7 @@ export class TileMap {
         /** @constant @readonly @type {Tile[][]} */
         this.tiles = tiles;
         /** @type {Tile} when probing a coordinate outside the map, this is the tile that is returned */
-        this.outOfBoundsWall = this.findFirst({ wall: true });
+        this.outOfBoundsWall = this.findFirst({ isWall: true });
     }
 
     toString() {
@@ -185,7 +184,7 @@ export class TileMap {
             return true;
         }
 
-        return this.tiles[y][x].wall;
+        return this.tiles[y][x].isWall;
     }
 
     findFirst(criteria) {
@@ -242,8 +241,29 @@ export class TileMap {
     getAreaAround(x, y, radius) {
         return this.getArea(x - radius, y - radius, x + radius, y + radius);
     }
+
+    isVisible(x, y) {
+        //
+        // At least one of the four cardinal neighbours
+        // must be non-wall in order for a tile to be
+        // visible
+        if (!this.isWall(x - 1, y)) {
+            return true;
+        }
+        if (!this.isWall(x + 1, y)) {
+            return true;
+        }
+        if (!this.isWall(x, y - 1)) {
+            return true;
+        }
+        if (!this.isWall(x, y + 1)) {
+            return true;
+        }
+
+        return false;
+    }
 }
 
-if (Math.PI < 0 && AsciiWindow && Texture && Orientation) {
+if (Math.PI < 0 && AsciiWindow && Orientation) {
     ("STFU Linda");
 }

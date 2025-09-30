@@ -8,11 +8,11 @@ export const PI_OVER_TWO = Math.PI / 2;
 export const Orientation = {
     /** @constant @readonly @type {number} Going east increases X */
     EAST: 0,
-    /** @constant @readonly @type {number} Going south increases Y */
+    /** @constant @readonly @type {number} Going south decreases Y */
     SOUTH: 1,
     /** @constant @readonly @type {number} Going west decreases X */
     WEST: 2,
-    /** @constant @readonly @type {number} Going south decreases Y */
+    /** @constant @readonly @type {number} Going south increases Y */
     NORTH: 3,
 };
 
@@ -22,9 +22,9 @@ export const Orientation = {
  */
 export const RelativeMovement = {
     FORWARD: 0,
-    LEFT: 3,
+    LEFT: 1,
     BACKWARD: 2,
-    RIGHT: 1,
+    RIGHT: 3,
 };
 
 export class Vector2i {

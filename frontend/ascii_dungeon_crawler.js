@@ -1,7 +1,6 @@
 import { Vector2i, Orientation, RelativeMovement, PI_OVER_TWO } from "./ascii_types.js";
 import { DefaultRendererOptions, FirstPersonRenderer } from "./ascii_first_person_renderer.js";
 import { MiniMapRenderer } from "../ascii_minimap_renderer.js";
-import { Texture } from "./ascii_textureloader.js";
 import { AsciiWindow } from "./ascii_window.js";
 import { TileMap } from "./ascii_tile_map.js";
 import eobWallUrl1 from "./eob1.png";
@@ -141,8 +140,8 @@ class DungeonCrawler {
             return;
         }
         this.rendering.firstPersonRenderer.renderFrame(
-            camX + 0.5, // add .5 to get camera into center of cell
-            camY + 0.5, // add .5 to get camera into center of cell
+            camX, // add .5 to get camera into center of cell
+            camY, // add .5 to get camera into center of cell
             angle,
         );
     }
@@ -156,7 +155,7 @@ class DungeonCrawler {
 
         this.map = TileMap.fromText(mapString);
 
-        this.player._posV = this.map.findFirst({ startLocation: true });
+        this.player._posV = this.map.findFirst({ isStartLocation: true });
 
         if (!this.player._posV) {
             throw new Error("Could not find a start location for the player");
@@ -164,31 +163,18 @@ class DungeonCrawler {
 
         this.rendering.miniMapRenderer = new MiniMapRenderer(this.rendering.minimapWindow, this.map);
 
-        const textureUrls = [eobWallUrl1, gnollSpriteUrl];
-        const textures = new Array(textureUrls.length).fill();
-        let textureLoadCount = 0;
-
-        textureUrls.forEach((url, textureId) => {
-            Texture.fromSource(url).then((texture) => {
-                textures[textureId] = texture;
-                textureLoadCount++;
-
-                if (textureLoadCount < textureUrls.length) {
-                    return;
-                }
-                this.rendering.firstPersonRenderer = new FirstPersonRenderer(
-                    this.rendering.firstPersonWindow,
-                    this.map,
-                    textures,
-                    this.rendering.options,
-                );
-                this.render();
-                this.renderMinimap();
-                this.renderCompass();
-
-                console.debug("renderer ready", textures);
-            });
-        });
+        const textureFilenames = [eobWallUrl1, gnollSpriteUrl];
+        this.rendering.firstPersonRenderer = new FirstPersonRenderer(
+            this.rendering.firstPersonWindow,
+            this.map,
+            textureFilenames,
+            this.rendering.options,
+        );
+        this.rendering.firstPersonRenderer.onReady = () => {
+            this.render();
+            this.renderMinimap();
+            this.renderCompass();
+        };
     }
 
     startTurnAnimation(quarterTurns = 1) {
@@ -237,8 +223,8 @@ class DungeonCrawler {
                 this.player._posV,
                 this.player.angle,
             );
-            this.delay += 250; // MAGIC NUMBER: Pause for a tenth of a second after hitting a wall
-            return false;
+            // this.delay += 250; // MAGIC NUMBER: Pause for a tenth of a second after hitting a wall
+            // return false;
         }
 
         this.animation = {
@@ -267,10 +253,10 @@ class DungeonCrawler {
             KeyW: () => this.startMoveAnimation(RelativeMovement.FORWARD),
             ArrowUp: () => this.startMoveAnimation(RelativeMovement.FORWARD),
             ArrowDown: () => this.startMoveAnimation(RelativeMovement.BACKWARD),
-            ArrowLeft: () => this.startTurnAnimation(-1),
-            ArrowRight: () => this.startTurnAnimation(1),
-            KeyQ: () => this.startTurnAnimation(-1),
-            KeyE: () => this.startTurnAnimation(1),
+            ArrowLeft: () => this.startTurnAnimation(1),
+            ArrowRight: () => this.startTurnAnimation(-1),
+            KeyQ: () => this.startTurnAnimation(1),
+            KeyE: () => this.startTurnAnimation(-1),
         };
         this.keys.names = Object.keys(this.keys.handlers);
 

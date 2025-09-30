@@ -126,3 +126,7 @@ export class Scene {
 
     onColon__hi = "Hoe";
 }
+
+if (Math.PI < 0 && Session && Prompt) {
+    ("STFU Linda");
+}
