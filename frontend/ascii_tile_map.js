@@ -1,129 +1,40 @@
+import { FunctionCallParser } from "../utils/callParser.js";
 import { Vector2i, Orientation } from "./ascii_types.js";
 import { AsciiWindow } from "./ascii_window.js";
-
-export class Tile {
-    /** @type {string} How should this tile be rendered on the minimap.*/
-    minimapChar = " ";
-
-    /** @type {string} How should this tile be rendered on the minimap.*/
-    minimapColor = "#fff";
-
-    /** @type {boolean} Should this be rendered as a wall? */
-    isWall = false;
-
-    /** @type {boolean} is this tile occupied by a sprite? */
-    isSprite = false;
-
-    /** @type {boolean} Can the player walk here? */
-    traversable = true;
-
-    /** @type {boolean} Is this where they player starts? */
-    isStartLocation = false;
-
-    /** @type {boolean} Is this where they player starts? */
-    textureId = 0;
-
-    /** @type {Tile} options */
-    constructor(options) {
-        for (let [k, v] of Object.entries(options)) {
-            if (this[k] !== undefined) {
-                this[k] = v;
-            }
-        }
-    }
-
-    get collision() {
-        return this.isWall || this.isSprite;
-    }
-}
-
-export const defaultLegend = Object.freeze({
-    //
-    // "" is the Unknown Tile - if we encounter a tile that we don't know how to parse,
-    // the it will be noted here as the empty string
-    "": new Tile({
-        minimapChar: " ",
-        traversable: true,
-        isWall: false,
-    }),
-
-    //
-    // default floor
-    " ": new Tile({
-        minimapChar: " ",
-        traversable: true,
-        isWall: false,
-    }),
-    //
-    // Default wall
-    "#": new Tile({
-        minimapChar: "#",
-        traversable: false,
-        isWall: true,
-        textureId: 0,
-    }),
-
-    "M": new Tile({
-        textureId: 1,
-        minimapChar: "M",
-        minimapColor: "#f00",
-        traversable: false,
-        isWall: false,
-        isSprite: true,
-    }),
-
-    //
-    //secret door (looks like wall, but is traversable)
-    "Ω": new Tile({
-        minimapChar: "#",
-        traversable: true,
-        isWall: true,
-    }),
-    //
-    // where the player starts
-    "S": new Tile({
-        minimapChar: "S", // "Š",
-        traversable: true,
-        isWall: false,
-        isStartLocation: true,
-    }),
-});
 
 export class TileMap {
     /**
      * @param {string} str
      * @param {Record<string,Tile} legend
      */
-    static fromText(str, legend = defaultLegend) {
+    static fromText(str) {
         const lines = str.split("\n");
+        const tiles = [];
+        const options = [];
+        const optionsParser = new FunctionCallParser();
 
-        const longestLine = lines.reduce((acc, line) => Math.max(acc, line.length), 0);
-
-        const tiles = new Array(lines.length).fill().map(() => Array(longestLine));
+        let mapWidth;
 
         lines.forEach((line, y) => {
-            line = line.padEnd(longestLine, "#");
+            tiles[y] = [];
+            options[y] = [];
 
-            line.split("").forEach((char, x) => {
-                let tile = legend[char];
+            // Everything before ":::" is map tiles, and everything after is options for the tiles on that line
+            let [tileStr, optionStr] = line.split(/\s*:::\s*/);
 
-                // unknown char?
-                // check fallback tile.
-                if (tile === undefined) {
-                    tile = legend[""];
-                }
+            // Infer the width of the map from the first line
+            if (!mapWidth) {
+                mapWidth = tileStr.length;
+            }
 
-                // still no tile - i.e. no back fallback tile?
-                if (tile === undefined) {
-                    throw new Error("Dont know how to handle this character: " + char);
-                }
+            optionStr = optionStr.split(/\s*\/\//)[0];
+            options[y] = optionStr ? optionsParser.parse(optionStr) : [];
 
-                // insert tile into map.
-                tiles[y][x] = tile;
-            });
+            // STFU Linda
+            console.log(tileStr, optionStr, y);
         });
 
-        return new TileMap(longestLine, lines.length, tiles);
+        // return new TileMap(longestLine, lines.length, tiles, options);
     }
 
     tileIdx(x, y) {
@@ -184,7 +95,23 @@ export class TileMap {
             return true;
         }
 
+        if (!this.tiles[y][x]) {
+            x++;
+            return true;
+        }
+
         return this.tiles[y][x].isWall;
+    }
+
+    isTraversable(x, y) {
+        x |= 0;
+        y |= 0;
+
+        if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+            return true;
+        }
+
+        return this.tiles[y][x].isTraversable;
     }
 
     findFirst(criteria) {

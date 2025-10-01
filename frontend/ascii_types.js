@@ -2,8 +2,7 @@ export const PI_OVER_TWO = Math.PI / 2;
 
 /**
  * Enum Cardinal Direction (east north west south)
- * @constant
- * @readonly
+ * @constant @readonly @enum {number}
  */
 export const Orientation = {
     /** @constant @readonly @type {number} Going east increases X */
@@ -18,7 +17,7 @@ export const Orientation = {
 
 /**
  * Enum Relative Direction (forward, left, right, backwards)
- * @readonly
+ * @constant @readonly @enum {number}
  */
 export const RelativeMovement = {
     FORWARD: 0,

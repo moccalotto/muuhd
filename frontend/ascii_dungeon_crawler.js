@@ -3,8 +3,6 @@ import { DefaultRendererOptions, FirstPersonRenderer } from "./ascii_first_perso
 import { MiniMapRenderer } from "../ascii_minimap_renderer.js";
 import { AsciiWindow } from "./ascii_window.js";
 import { TileMap } from "./ascii_tile_map.js";
-import eobWallUrl1 from "./eob1.png";
-import gnollSpriteUrl from "./gnoll.png";
 import { sprintf } from "sprintf-js";
 
 class Player {
@@ -109,7 +107,7 @@ class DungeonCrawler {
             /** @type {FirstPersonRenderer} */ firstPersonRenderer: null,
             /** @type {MiniMapRenderer}     */ miniMapRenderer: null,
 
-            firstPersonWindow: new AsciiWindow(document.getElementById("viewport"), 100, 45), // MAGIC CONSTANTS
+            firstPersonWindow: new AsciiWindow(document.getElementById("viewport"), 80, 45), // MAGIC CONSTANTS
             minimapWindow: new AsciiWindow(document.getElementById("minimap"), 9, 9), // MAGIC CONSTANT
 
             options: DefaultRendererOptions,
@@ -163,11 +161,10 @@ class DungeonCrawler {
 
         this.rendering.miniMapRenderer = new MiniMapRenderer(this.rendering.minimapWindow, this.map);
 
-        const textureFilenames = [eobWallUrl1, gnollSpriteUrl];
         this.rendering.firstPersonRenderer = new FirstPersonRenderer(
             this.rendering.firstPersonWindow,
             this.map,
-            textureFilenames,
+            ["./eobBlueWall.png", "gnoll.png"], // textures
             this.rendering.options,
         );
         this.rendering.firstPersonRenderer.onReady = () => {
@@ -216,15 +213,15 @@ class DungeonCrawler {
 
         //
         // We cant move into walls
-        if (this.map.isWall(targetV.x, targetV.y)) {
+        if (!this.map.isTraversable(targetV.x, targetV.y)) {
             console.info(
-                "bumped into wall at %s (mypos: %s), direction=%d",
+                "bumped into an obstacle at %s (mypos: %s), direction=%d",
                 targetV,
                 this.player._posV,
                 this.player.angle,
             );
-            // this.delay += 250; // MAGIC NUMBER: Pause for a tenth of a second after hitting a wall
-            // return false;
+            this.delay += 250; // MAGIC NUMBER: Pause for a bit after hitting an obstacle
+            return false;
         }
 
         this.animation = {

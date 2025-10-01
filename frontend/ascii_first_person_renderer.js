@@ -1,20 +1,15 @@
-import { TileMap, Tile } from "./ascii_tile_map.js";
+import { TileMap } from "./ascii_tile_map.js";
+import { Tile } from "./ascii_tile_types.js";
 import { AsciiWindow } from "./ascii_window.js";
 import * as THREE from "three";
-import eobWallUrl1 from "./eob1.png";
-import gnollSpriteUrl from "./gnoll.png";
+import { Vector3 } from "three";
 
 export const DefaultRendererOptions = {
     viewDistance: 5,
-    fov: Math.PI / 3, // 60 degrees - good for spooky
-
-    wallChar: "#",
+    fov: 60, // degrees
 
     floorColor: 0x654321,
-    floorChar: "f",
     ceilingColor: 0x555555,
-    ceilingChar: "c",
-    fadeOutColor: 0x555555,
 };
 
 export class FirstPersonRenderer {
@@ -24,36 +19,63 @@ export class FirstPersonRenderer {
      * @param {string[]} textureFilenames
      */
     constructor(aWindow, map, textureFilenames, options) {
-        const w = 600;
-        const h = 400;
+        this.map = map;
+        this.window = aWindow;
+
+        this.widthPx = aWindow.htmlElement.clientWidth;
+        this.heightPx = aWindow.htmlElement.clientHeight;
+        this.asciiWidth = aWindow.width;
+        this.asciiHeight = aWindow.height;
+        this.aaspect = this.widthPx / this.heightPx;
 
         this.fov = options.fov ?? DefaultRendererOptions.fov;
         this.viewDistance = options.viewDistance ?? DefaultRendererOptions.viewDistance;
-
-        this.window = aWindow;
-        this.map = map;
+        this.floorColor = options.floorColor ?? DefaultRendererOptions.floorColor;
+        this.ceilingColor = options.ceilingColor ?? DefaultRendererOptions.ceilingColor;
 
         this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera((this.fov * 180) / Math.PI, w / h);
-        this.renderer = new THREE.WebGLRenderer({ antialias: false }); // Do not anti-alias, it could interfere with the conversion to ascii
+        this.mainCamera = new THREE.PerspectiveCamera(this.fov, this.aspect, 0.1, this.viewDistance);
+        this.renderer = new THREE.WebGLRenderer({
+            antialias: false,
+            preserveDrawingBuffer: true,
+        }); // Do not anti-alias, it could interfere with the conversion to ascii
+
+        //
+        // Render buffer
+        //
+        this.bufferCanvas = document.createElement("canvas");
+        this.bufferCanvas.width = this.asciiWidth;
+        this.bufferCanvas.height = this.asciiHeight;
+        this.bufferContext = this.bufferCanvas.getContext("2d");
 
         //
         // Fog, Fadeout & Background
         //
         this.scene.background = new THREE.Color(0);
-        this.scene.fog = new THREE.Fog(0, 0, this.viewDistance - 1);
+        this.scene.fog = new THREE.Fog(0, 0, this.viewDistance);
 
         //
         // Camera
         //
-        this.camera.up.set(0, 0, 1); // Z-up instead of Y-up
+        this.mainCamera.up.set(0, 0, 1); // Z-up instead of Y-up
 
         //
         // Torch
         //
-        this.torch = new THREE.PointLight(0xffffff, 0.9, this.viewDistance, 2); // https://threejs.org/docs/#api/en/lights/PointLight
-        this.torch.position.copy(this.camera.position);
+        this.torch = new THREE.PointLight(0xffffff, 2, this.viewDistance * 2, 1); // https://threejs.org/docs/#api/en/lights/PointLight
+        this.torch.position.copy(this.mainCamera.position);
         this.scene.add(this.torch);
+
+        this.textures = [];
+
+        for (const textureFile of textureFilenames) {
+            const tex = new THREE.TextureLoader().load(textureFile, (t) => {
+                t.magFilter = THREE.NearestFilter; // no smoothing when scaling up
+                t.minFilter = THREE.NearestFilter; // no mipmaps / no smoothing when scaling down
+                t.generateMipmaps = false; // don’t build mipmaps
+            });
+            this.textures.push(tex);
+        }
 
         //
         // Sprites
@@ -65,8 +87,7 @@ export class FirstPersonRenderer {
         this.initMap();
 
         //
-        this.renderer.setSize(w, h);
-        document.getElementById("threejs").appendChild(this.renderer.domElement);
+        this.renderer.setSize(this.asciiWidth * 1, this.asciiHeight * 1);
         this.renderFrame();
     }
 
@@ -74,15 +95,19 @@ export class FirstPersonRenderer {
         const wallPlanes = [];
         const sprites = [];
 
+        //
+        // -------------
+        // PARSE THE MAP
+        // -------------
         /** @type {Map<number,Array} */
         this.map.forEach((/** @type {Tile} */ tile, /** @type {number} */ x, /** @type {number} y */ y) => {
             //
             if (tile.isStartLocation) {
-                this.camera.position.set(x, y, 0);
-                this.camera.lookAt(x, y - 1, 0);
-                this.torch.position.copy(this.camera.position);
+                this.mainCamera.position.set(x, y, 0);
+                this.mainCamera.lookAt(x, y - 1, 0);
+                this.torch.position.copy(this.mainCamera.position);
 
-                console.log("Initial Camera Position:", this.camera.position);
+                console.log("Initial Camera Position:", this.mainCamera.position);
                 return;
             }
 
@@ -102,7 +127,7 @@ export class FirstPersonRenderer {
                 return;
             }
 
-            if (tile.isSprite) {
+            if (tile.isEncounter) {
                 console.log("Sprite", tile);
                 sprites.push([x, y, tile.textureId]);
                 return;
@@ -112,41 +137,48 @@ export class FirstPersonRenderer {
         });
 
         //
-        // Floor (XY plane at Z = -.5)
-        //
+        // ---------------------------
+        // FLOOR (XY PLANE AT Z = -.5)
+        // ---------------------------
         const floorGeo = new THREE.PlaneGeometry(this.map.width, this.map.height);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x964b00 /* side: THREE.DoubleSide */ });
+        const floorMat = new THREE.MeshStandardMaterial({
+            color: this.floorColor /* side: THREE.DoubleSide */,
+        });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.position.set(this.map.width / 2, this.map.height / 2, -0.5);
         this.scene.add(floor);
 
         //
-        // Ceiling (XY plane at Z = .5)
-        //
+        // -----------------------------
+        // CEILING (XY PLANE AT Z = .5)
+        // -----------------------------
         const ceilingGeo = new THREE.PlaneGeometry(this.map.width, this.map.height);
-        const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x333333, side: THREE.BackSide });
+        const ceilingMat = new THREE.MeshStandardMaterial({
+            color: this.ceilingColor,
+            side: THREE.BackSide,
+        });
         const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
         ceiling.position.set(this.map.width / 2, this.map.height / 2, 0.5);
         this.scene.add(ceiling);
 
         //
-        // Walls
-        //
-        const wallTex = new THREE.TextureLoader().load(eobWallUrl1, (texture) => {
-            texture.magFilter = THREE.NearestFilter; // no smoothing when scaling up
-            texture.minFilter = THREE.NearestFilter; // no mipmaps / no smoothing when scaling down
-            texture.generateMipmaps = false; // don’t build mipmaps
-        });
-
+        // ------
+        // WALLS
+        // ------
         const wallGeo = new THREE.PlaneGeometry();
         wallGeo.rotateX(Math.PI / 2); // Get the geometry-plane the right way up (z-up)
-        // wallGeo.rotateY(Math.PI); // rotate textures to be the right way up
+        wallGeo.rotateY(Math.PI); // rotate textures to be the right way up
 
         const instancedMesh = new THREE.InstancedMesh(
             wallGeo,
-            new THREE.MeshStandardMaterial({ map: wallTex }),
+            new THREE.MeshStandardMaterial({ map: this.textures[0] }),
             wallPlanes.length,
         );
+        instancedMesh.userData.pastelMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+        });
+
+        instancedMesh.userData.parimaryMaterial = instancedMesh.material;
         this.scene.add(instancedMesh);
 
         // Temp objects for generating matrices
@@ -162,29 +194,19 @@ export class FirstPersonRenderer {
         instancedMesh.instanceMatrix.needsUpdate = true;
 
         //
-        // Sprites
+        // -------
+        // SPRITES
+        // -------
         //
-        // Load a sprite texture
-
-        const tex = new THREE.TextureLoader().load(gnollSpriteUrl, (t) => {
-            t.magFilter = THREE.NearestFilter; // pixel-art crisp
-            t.minFilter = THREE.NearestFilter;
-            t.generateMipmaps = false;
-            t.wrapS = THREE.RepeatWrapping;
-            t.wrapT = THREE.RepeatWrapping;
-            t.repeat.set(1, 1);
-        });
-
-        const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true });
-
         for (const [x, y, textureId] of sprites) {
+            // TODO: only one material per sprite type
+            const spriteMat = new THREE.SpriteMaterial({
+                map: this.textures[textureId],
+                transparent: true,
+            });
             const sprite = new THREE.Sprite(spriteMat);
-            sprite.position.set(
-                x,
-                y,
-                0, // z (stand on floor)
-            );
             sprite.position.set(x, y, 0);
+            sprite.userData.mapLocation = new Vector3(x, y, 0); // The location (in tilemap coordinates) of this sprite
             this.sprites.push(sprite);
             this.scene.add(sprite);
             console.log({ x, y, textureId });
@@ -192,23 +214,115 @@ export class FirstPersonRenderer {
     }
 
     renderFrame(posX, posY, dirAngle, commit = true) {
-        this.renderer.render(this.scene, this.camera);
-        const lookAtV = new THREE.Vector3(1, 0, 0);
-        lookAtV
-            .applyAxisAngle(new THREE.Vector3(0, 0, 1), dirAngle)
-            .normalize()
-            .add(this.camera.position);
+        //
+        const posV = new Vector3(posX, posY, 0);
 
-        this.camera.position.x = posX;
-        this.camera.position.y = posY;
+        //
+        // -------------------------------
+        // Camera Position and Orientation
+        // -------------------------------
+        //
+        // Direction we're looking
+        const lookDirV = new Vector3(1, 0, 0)
+            .applyAxisAngle(new Vector3(0, 0, 1), dirAngle)
+            .setZ(0)
+            .normalize();
 
-        this.torch.position.copy(this.camera.position);
-        this.torch.position.z += 0.25;
-        this.camera.lookAt(lookAtV);
+        //
+        // The Point we're looking at.
+        //
+        const lookAtV = lookDirV.clone().add(posV);
+        lookAtV.z = 0;
+
+        this.mainCamera.position.copy(posV); //  Move the camera
+        this.mainCamera.lookAt(lookAtV); //      Rotate the camera
+
+        // -----
+        // TORCH
+        // -----
+        //
+        // The torch should hover right above the camera
+        this.torch.position.set(posV.x, posV.y, posV.z + 0.25);
+
+        // -------
+        // SPRITES
+        // -------
+        //
+        this.sprites.forEach((sprite) => {
+            //
+            // The tilemap position (vector) of the sprite
+            /** @type {Vector3} */
+            const spriteCenterV = sprite.userData.mapLocation;
+
+            //
+            // Direction from sprite to camera
+            const dir = new Vector3().subVectors(spriteCenterV, posV);
+            const len = dir.length();
+
+            //
+            if (len > this.viewDistance) {
+                // Sprite is out of range, do nothing
+                return;
+            }
+
+            if (Math.abs(dir.x) > 1e-6 && Math.abs(dir.y) > 1e-6) {
+                // Sprite is not in a direct cardinal line to us, do nothing
+                return;
+            }
+
+            sprite.position.copy(spriteCenterV).addScaledVector(lookDirV, -0.5);
+        });
+
+        performance.mark("scene_render_start");
+        this.renderer.render(this.scene, this.mainCamera);
+        performance.mark("scene_render_end");
+        performance.measure("3D Scene Rendering", "scene_render_start", "scene_render_end");
+
+        //
+        //
+        // ----------------
+        // ASCII Conversion
+        // ----------------
+        //
+        performance.mark("asciification_start");
+        const gl = this.renderer.getContext();
+        const width = this.renderer.domElement.width;
+        const height = this.renderer.domElement.height;
+
+        const pixels = new Uint8Array(width * height * 4);
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+        let idx = 0;
+        for (let y = height - 1; y >= 0; y--) {
+            for (let x = 0; x < width; x++) {
+                const r = pixels[idx];
+                const g = pixels[idx + 1];
+                const b = pixels[idx + 2];
+
+                const cssColor =
+                    "#" + //
+                    r.toString(16).padStart(2, "0") +
+                    g.toString(16).padStart(2, "0") +
+                    b.toString(16).padStart(2, "0");
+
+                this.window.put(x, y, "#", cssColor);
+
+                idx += 4;
+            }
+        }
+        performance.mark("asciification_end");
+        performance.measure(
+            "Asciification", // The name for our measurement
+            "asciification_start", // The starting mark
+            "asciification_end", // The ending mark
+        );
 
         //
         if (commit) {
+            performance.mark("dom_commit_start");
             this.window.commitToDOM();
+            performance.mark("dom_commit_end");
+            performance.measure("DOM Commit", "dom_commit_start", "dom_commit_end");
         }
     }
 }
