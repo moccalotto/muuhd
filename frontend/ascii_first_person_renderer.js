@@ -1,52 +1,55 @@
 import { TileMap } from "./ascii_tile_map.js";
-import { Tile } from "./ascii_tile_types.js";
+import { PlayerStartTile, Tile } from "./ascii_tile_types.js";
 import { AsciiWindow } from "./ascii_window.js";
 import * as THREE from "three";
 import { Vector3 } from "three";
 
 export const DefaultRendererOptions = {
-    viewDistance: 5,
-    fov: 60, // degrees
+    viewDistance: 5, // number of tiles we can see ahead
+    fov: 70, // degrees
 
     floorColor: 0x654321,
     ceilingColor: 0x555555,
+
+    commitToDOM: true,
 };
 
 export class FirstPersonRenderer {
     /**
      * @param {AsciiWindow} aWindow the window we render onto.
      * @param {TileMap} map
-     * @param {string[]} textureFilenames
      */
-    constructor(aWindow, map, textureFilenames, options) {
+    constructor(aWindow, map, options) {
         this.map = map;
         this.window = aWindow;
 
+        //
+        // Window geometry
+        //
         this.widthPx = aWindow.htmlElement.clientWidth;
         this.heightPx = aWindow.htmlElement.clientHeight;
         this.asciiWidth = aWindow.width;
         this.asciiHeight = aWindow.height;
         this.aaspect = this.widthPx / this.heightPx;
 
+        //
+        // Rendering options
+        //
         this.fov = options.fov ?? DefaultRendererOptions.fov;
         this.viewDistance = options.viewDistance ?? DefaultRendererOptions.viewDistance;
         this.floorColor = options.floorColor ?? DefaultRendererOptions.floorColor;
         this.ceilingColor = options.ceilingColor ?? DefaultRendererOptions.ceilingColor;
+        this.commitToDOM = options.commitToDOM ?? DefaultRendererOptions.commitToDOM;
 
+        //
+        // THREE variables
+        //
         this.scene = new THREE.Scene();
         this.mainCamera = new THREE.PerspectiveCamera(this.fov, this.aspect, 0.1, this.viewDistance);
         this.renderer = new THREE.WebGLRenderer({
-            antialias: false,
-            preserveDrawingBuffer: true,
-        }); // Do not anti-alias, it could interfere with the conversion to ascii
-
-        //
-        // Render buffer
-        //
-        this.bufferCanvas = document.createElement("canvas");
-        this.bufferCanvas.width = this.asciiWidth;
-        this.bufferCanvas.height = this.asciiHeight;
-        this.bufferContext = this.bufferCanvas.getContext("2d");
+            antialias: false, //                Do not AA - it ruins asciification
+            preserveDrawingBuffer: true, //     Preserve the rendering buffer so we can access it during asciification
+        });
 
         //
         // Fog, Fadeout & Background
@@ -66,22 +69,15 @@ export class FirstPersonRenderer {
         this.torch.position.copy(this.mainCamera.position);
         this.scene.add(this.torch);
 
-        this.textures = [];
-
-        for (const textureFile of textureFilenames) {
-            const tex = new THREE.TextureLoader().load(textureFile, (t) => {
-                t.magFilter = THREE.NearestFilter; // no smoothing when scaling up
-                t.minFilter = THREE.NearestFilter; // no mipmaps / no smoothing when scaling down
-                t.generateMipmaps = false; // don’t build mipmaps
-            });
-            this.textures.push(tex);
-        }
-
         //
-        // Sprites
+        // Caches
         //
-        /** @type {THREE.Sprite[]} */
-        this.sprites = [];
+        /** @type {Map<string|number,THREE.Texture} Textures - one per unique textureId (i.e. filename) */
+        this.textures = new Map();
+        /** @type {Map<string|number,THREE.Material} Sprite materials - one material per unique sprite texture  */
+        this.spriteMaterials = new Map();
+        /** @type {THREE.Sprite[]} All roaming tiles that regularly needs their positions updated */
+        this.roamers = [];
 
         //
         this.initMap();
@@ -91,9 +87,47 @@ export class FirstPersonRenderer {
         this.renderFrame();
     }
 
+    getTexture(textureId) {
+        console.debug("fetching texture", { textureId });
+        let texture = this.textures.get(textureId);
+        if (!texture) {
+            console.debug("    miss... loading texture", { textureId });
+            texture = new THREE.TextureLoader().load(`${textureId}.png`, (t) => {
+                t.magFilter = THREE.NearestFilter; // no smoothing when scaling up
+                t.minFilter = THREE.NearestFilter; // no mipmaps / no smoothing when scaling down
+                t.generateMipmaps = false; // don’t build mipmaps
+            });
+            this.textures.set(textureId, texture);
+        }
+
+        if (!texture) {
+            console.warn("    texture could not be loaded", { textureId, texture });
+        }
+
+        return texture;
+    }
+
+    getSpriteMaterial(textureId) {
+        console.debug("fetching material", { textureId });
+
+        let material = this.spriteMaterials.get(textureId);
+
+        if (!material) {
+            console.log("Creating material", { textureId });
+            material = new THREE.SpriteMaterial({
+                map: this.getTexture(textureId),
+                transparent: true,
+            });
+
+            this.spriteMaterials.set(textureId, material);
+        }
+
+        return material;
+    }
+
     initMap() {
         const wallPlanes = [];
-        const sprites = [];
+        const roamers = [];
 
         //
         // -------------
@@ -101,8 +135,14 @@ export class FirstPersonRenderer {
         // -------------
         /** @type {Map<number,Array} */
         this.map.forEach((/** @type {Tile} */ tile, /** @type {number} */ x, /** @type {number} y */ y) => {
+            tile.textureId !== null && tile.textureId !== undefined && this.getTexture(tile.textureId);
+
             //
-            if (tile.isStartLocation) {
+            if (tile instanceof PlayerStartTile) {
+                //
+                // This is temporary - the one that calls render() will determine the camera's
+                // position and orientation
+                //
                 this.mainCamera.position.set(x, y, 0);
                 this.mainCamera.lookAt(x, y - 1, 0);
                 this.torch.position.copy(this.mainCamera.position);
@@ -111,25 +151,24 @@ export class FirstPersonRenderer {
                 return;
             }
 
-            if (tile.isWall) {
-                if (!this.map.isWall(x, y + 1)) {
+            if (tile.looksLikeWall) {
+                if (!this.map.looksLikeWall(x, y + 1)) {
                     wallPlanes.push([x, y + 0.5, Math.PI * 0.0]);
                 }
-                if (!this.map.isWall(x + 1, y)) {
+                if (!this.map.looksLikeWall(x + 1, y)) {
                     wallPlanes.push([x + 0.5, y, Math.PI * 0.5]);
                 }
-                if (!this.map.isWall(x, y - 1)) {
+                if (!this.map.looksLikeWall(x, y - 1)) {
                     wallPlanes.push([x, y - 0.5, Math.PI * 1.0]);
                 }
-                if (!this.map.isWall(x - 1, y)) {
+                if (!this.map.looksLikeWall(x - 1, y)) {
                     wallPlanes.push([x - 0.5, y, Math.PI * 1.5]);
                 }
                 return;
             }
 
-            if (tile.isEncounter) {
-                console.log("Sprite", tile);
-                sprites.push([x, y, tile.textureId]);
+            if (tile.isRoaming) {
+                roamers.push([x, y, tile]);
                 return;
             }
 
@@ -168,10 +207,13 @@ export class FirstPersonRenderer {
         const wallGeo = new THREE.PlaneGeometry();
         wallGeo.rotateX(Math.PI / 2); // Get the geometry-plane the right way up (z-up)
         wallGeo.rotateY(Math.PI); // rotate textures to be the right way up
+        const wallTextureId = this.map.getReferenceWallTile().textureId;
 
         const instancedMesh = new THREE.InstancedMesh(
             wallGeo,
-            new THREE.MeshStandardMaterial({ map: this.textures[0] }),
+            new THREE.MeshStandardMaterial({
+                map: this.getTexture(wallTextureId),
+            }),
             wallPlanes.length,
         );
         instancedMesh.userData.pastelMaterial = new THREE.MeshBasicMaterial({
@@ -195,34 +237,58 @@ export class FirstPersonRenderer {
 
         //
         // -------
-        // SPRITES
+        // Roamers
         // -------
         //
-        for (const [x, y, textureId] of sprites) {
-            // TODO: only one material per sprite type
-            const spriteMat = new THREE.SpriteMaterial({
-                map: this.textures[textureId],
-                transparent: true,
-            });
-            const sprite = new THREE.Sprite(spriteMat);
-            sprite.position.set(x, y, 0);
-            sprite.userData.mapLocation = new Vector3(x, y, 0); // The location (in tilemap coordinates) of this sprite
-            this.sprites.push(sprite);
-            this.scene.add(sprite);
-            console.log({ x, y, textureId });
+        // Roaming tiles (e.g. encounters)
+        //
+        for (const [x, y, tile] of roamers) {
+            const textureId = tile.textureId;
+
+            if (!textureId) {
+                console.warn("invalid textureId", { x, y, textureId });
+            }
+
+            const roamerSprite = new THREE.Sprite(this.getSpriteMaterial(textureId));
+            roamerSprite.position.set(x, y, 0);
+            roamerSprite.userData.tile = tile;
+            this.roamers.push(roamerSprite);
+            this.scene.add(roamerSprite);
         }
     }
 
-    renderFrame(posX, posY, dirAngle, commit = true) {
+    renderFrame(camX, camY, camOrientation) {
         //
-        const posV = new Vector3(posX, posY, 0);
+        // Camera and lighting
+        //
+        const camV = new Vector3(camX, camY, 0);
+        this.updateCameraPosition(camOrientation, camV);
+        this.torch.position.set(camV.x, camV.y, camV.z + 0.25);
 
         //
-        // -------------------------------
-        // Camera Position and Orientation
-        // -------------------------------
+        // Update position of roaming entities
         //
-        // Direction we're looking
+        this.updateRoamsers(camV);
+
+        //
+        // Render the scene into an image
+        //
+        this.renderSceneImage();
+
+        //
+        // Convert the rendered image to ASCII
+        //
+        this.renderSceneASCII();
+    }
+
+    renderSceneImage() {
+        performance.mark("scene_render_start");
+        this.renderer.render(this.scene, this.mainCamera);
+        performance.mark("scene_render_end");
+        performance.measure("3D Scene Rendering", "scene_render_start", "scene_render_end");
+    }
+
+    updateCameraPosition(dirAngle, camV) {
         const lookDirV = new Vector3(1, 0, 0)
             .applyAxisAngle(new Vector3(0, 0, 1), dirAngle)
             .setZ(0)
@@ -231,59 +297,54 @@ export class FirstPersonRenderer {
         //
         // The Point we're looking at.
         //
-        const lookAtV = lookDirV.clone().add(posV);
+        const lookAtV = lookDirV.clone().add(camV);
         lookAtV.z = 0;
 
-        this.mainCamera.position.copy(posV); //  Move the camera
-        this.mainCamera.lookAt(lookAtV); //      Rotate the camera
+        this.mainCamera.position.copy(camV); //  Move the camera
+        this.mainCamera.lookAt(lookAtV);
+    }
 
-        // -----
-        // TORCH
-        // -----
-        //
-        // The torch should hover right above the camera
-        this.torch.position.set(posV.x, posV.y, posV.z + 0.25);
+    updateRoamsers(camV) {
+        this.roamers.forEach((roamerSprite) => {
+            /** @type {Tile} */
+            const tile = roamerSprite.userData.tile;
 
-        // -------
-        // SPRITES
-        // -------
-        //
-        this.sprites.forEach((sprite) => {
             //
-            // The tilemap position (vector) of the sprite
+            // The map position (vector) of the encounter
             /** @type {Vector3} */
-            const spriteCenterV = sprite.userData.mapLocation;
+            const roamerTilePosV = new THREE.Vector3(tile.currentPosX, tile.currentPosY, 0);
+
+            // -------------------------------------
+            // Move sprite visually closer to camera
+            // -------------------------------------
+            //
+            // Sprites look better if they are right on the
+            // edge of their tile, closest to the player.
+            //
+            //
+            // Direction from encounter to camera
+            const dirV = new Vector3().subVectors(roamerTilePosV, camV);
 
             //
-            // Direction from sprite to camera
-            const dir = new Vector3().subVectors(spriteCenterV, posV);
-            const len = dir.length();
-
-            //
-            if (len > this.viewDistance) {
-                // Sprite is out of range, do nothing
+            // Is the encounter too far away to see? (manhattan distance for
+            if (dirV.manhattanLength() > this.viewDistance) {
+                // Encounter is out of range is out of range, do nothing
                 return;
             }
 
-            if (Math.abs(dir.x) > 1e-6 && Math.abs(dir.y) > 1e-6) {
-                // Sprite is not in a direct cardinal line to us, do nothing
-                return;
-            }
-
-            sprite.position.copy(spriteCenterV).addScaledVector(lookDirV, -0.5);
+            //
+            // Set sprite position to the edge of the tile that is closest to the camera
+            roamerSprite.position.copy(roamerTilePosV);
+            // Magic constant. 0.6 is visually appealing and makes the encounter/sprite
+            // look fairly close while still being able to see the entire sprite.
+            roamerSprite.position.addScaledVector(dirV.normalize(), -0.6);
         });
+    }
 
-        performance.mark("scene_render_start");
-        this.renderer.render(this.scene, this.mainCamera);
-        performance.mark("scene_render_end");
-        performance.measure("3D Scene Rendering", "scene_render_start", "scene_render_end");
-
-        //
-        //
-        // ----------------
-        // ASCII Conversion
-        // ----------------
-        //
+    /**
+     * Convert rendered image to ASCII (asciification)
+     */
+    renderSceneASCII() {
         performance.mark("asciification_start");
         const gl = this.renderer.getContext();
         const width = this.renderer.domElement.width;
@@ -314,11 +375,11 @@ export class FirstPersonRenderer {
         performance.measure(
             "Asciification", // The name for our measurement
             "asciification_start", // The starting mark
-            "asciification_end", // The ending mark
+            "asciification_end",
         );
 
         //
-        if (commit) {
+        if (this.commitToDOM) {
             performance.mark("dom_commit_start");
             this.window.commitToDOM();
             performance.mark("dom_commit_end");

@@ -1,66 +1,76 @@
-import { FunctionCallParser } from "../utils/callParser.js";
-import { Vector2i, Orientation } from "./ascii_types.js";
-import { AsciiWindow } from "./ascii_window.js";
+import parseOptions, { ParsedCall } from "../utils/callParser.js";
+import { Tile } from "./ascii_tile_types.js";
+import { Vector2i } from "./ascii_types.js";
 
 export class TileMap {
     /**
      * @param {string} str
      * @param {Record<string,Tile} legend
      */
-    static fromText(str) {
+    static fromHumanText(str) {
+        str = str.trim();
         const lines = str.split("\n");
+        /** @type {Array<Array<Tile>>} */
         const tiles = [];
-        const options = [];
-        const optionsParser = new FunctionCallParser();
 
         let mapWidth;
 
         lines.forEach((line, y) => {
-            tiles[y] = [];
-            options[y] = [];
-
             // Everything before ":::" is map tiles, and everything after is options for the tiles on that line
             let [tileStr, optionStr] = line.split(/\s*:::\s*/);
 
-            // Infer the width of the map from the first line
-            if (!mapWidth) {
+            if (y === 0) {
+                // Infer the width of the map from the first line
                 mapWidth = tileStr.length;
+                console.log({ mapWidth });
             }
 
-            optionStr = optionStr.split(/\s*\/\//)[0];
-            options[y] = optionStr ? optionsParser.parse(optionStr) : [];
+            // Create a new row in the 2d tiles array
+            tiles[y] = Array(mapWidth);
 
-            // STFU Linda
-            console.log(tileStr, optionStr, y);
+            optionStr = optionStr ? optionStr.split(/\s*\/\//)[0] : false;
+            const options = optionStr ? parseOptions(optionStr) : [];
+            let lineWidth = 0;
+
+            options.length && console.log({ options, y });
+
+            tileStr.split("").forEach((char, x) => {
+                //
+                // Check if there are options in the queue that matches the current character
+                const tileArgs = options[0] && options[0].name === char ? options.shift() : null;
+
+                tiles[y][x] = Tile.fromChar(char, tileArgs, x, y);
+
+                lineWidth++;
+            });
+
+            if (lineWidth !== mapWidth) {
+                console.error("Invalid line in map", {
+                    line: y,
+                    expectedWidth: mapWidth,
+                    lineWidth,
+                });
+                throw new Error("Line in map had invalid length");
+            }
         });
 
-        // return new TileMap(longestLine, lines.length, tiles, options);
-    }
-
-    tileIdx(x, y) {
-        return y * this.width + x;
-    }
-
-    getByIdx(idx) {
-        const y = Math.floor(idx / this.width);
-        const x = idx % this.width;
-        return this.tiles[y][x];
+        return new TileMap(tiles);
     }
 
     /**
-     * @param {number} width
-     * @param {number} height
      * @param {Tile[][]} tiles
+     * @param {Map<Tile,ParsedCall>} options
      */
-    constructor(width, height, tiles) {
+    constructor(tiles) {
         /** @constant @readonly @type {number} */
         this.height = tiles.length;
         /** @constant @readonly @type {number} */
         this.width = tiles[0].length;
         /** @constant @readonly @type {Tile[][]} */
         this.tiles = tiles;
+
         /** @type {Tile} when probing a coordinate outside the map, this is the tile that is returned */
-        this.outOfBoundsWall = this.findFirst({ isWall: true });
+        this.outOfBoundsWall = this.findFirstV({ looksLikeWall: true });
     }
 
     toString() {
@@ -76,6 +86,16 @@ export class TileMap {
         return result;
     }
 
+    tileIdx(x, y) {
+        return y * this.width + x;
+    }
+
+    getByIdx(idx) {
+        const y = Math.floor(idx / this.width);
+        const x = idx % this.width;
+        return this.tiles[y][x];
+    }
+
     get(x, y) {
         x |= 0;
         y |= 0;
@@ -87,7 +107,7 @@ export class TileMap {
         return this.tiles[y][x];
     }
 
-    isWall(x, y) {
+    looksLikeWall(x, y) {
         x |= 0;
         y |= 0;
 
@@ -100,7 +120,7 @@ export class TileMap {
             return true;
         }
 
-        return this.tiles[y][x].isWall;
+        return this.tiles[y][x].looksLikeWall;
     }
 
     isTraversable(x, y) {
@@ -114,7 +134,11 @@ export class TileMap {
         return this.tiles[y][x].isTraversable;
     }
 
-    findFirst(criteria) {
+    /**
+     * @param {object} criteria  Search criteria - AND gate
+     * @returns {Vector2i|undefined}
+     */
+    findFirstV(criteria) {
         return this.forEach((tile, x, y) => {
             for (let k in criteria) {
                 if (tile[k] === criteria[k]) {
@@ -124,6 +148,39 @@ export class TileMap {
         });
     }
 
+    /**
+     * @param {object} criteria  Search criteria - AND gate
+     * @returns {Tile|undefined}
+     */
+    findFirstTile(criteria) {
+        const v = this.findFirstV(criteria);
+        if (!v) {
+            return;
+        }
+
+        return this.get(v.x, v.y);
+    }
+
+    /**
+     * Return the main wall tile.
+     *
+     * Outer edge of map MUST be wall tiles, so we
+     * use tile at [0,0] as the reference wall tile
+     *
+     * @returns {WallTile}
+     */
+    getReferenceWallTile() {
+        return this.get(0, 0).clone();
+    }
+
+    /**
+     * Calls `fn(tile, x, y) ` on each element,
+     * but _stops_ if fn() returns anything but `undefined`,
+     * and then that return value is returned from `forEach`
+     *
+     * @param { (tile, x,y) => any|undefined ) } fn
+     * @returns any|undefined
+     */
     forEach(fn) {
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
@@ -168,29 +225,8 @@ export class TileMap {
     getAreaAround(x, y, radius) {
         return this.getArea(x - radius, y - radius, x + radius, y + radius);
     }
-
-    isVisible(x, y) {
-        //
-        // At least one of the four cardinal neighbours
-        // must be non-wall in order for a tile to be
-        // visible
-        if (!this.isWall(x - 1, y)) {
-            return true;
-        }
-        if (!this.isWall(x + 1, y)) {
-            return true;
-        }
-        if (!this.isWall(x, y - 1)) {
-            return true;
-        }
-        if (!this.isWall(x, y + 1)) {
-            return true;
-        }
-
-        return false;
-    }
 }
 
-if (Math.PI < 0 && AsciiWindow && Orientation) {
+if (Math.PI < 0 && ParsedCall) {
     ("STFU Linda");
 }

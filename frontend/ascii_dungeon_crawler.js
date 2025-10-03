@@ -1,6 +1,6 @@
 import { Vector2i, Orientation, RelativeMovement, PI_OVER_TWO } from "./ascii_types.js";
 import { DefaultRendererOptions, FirstPersonRenderer } from "./ascii_first_person_renderer.js";
-import { MiniMapRenderer } from "../ascii_minimap_renderer.js";
+import { MiniMap } from "./ascii_minimap.js";
 import { AsciiWindow } from "./ascii_window.js";
 import { TileMap } from "./ascii_tile_map.js";
 import { sprintf } from "sprintf-js";
@@ -105,15 +105,14 @@ class DungeonCrawler {
         /** @readonly */
         this.rendering = {
             /** @type {FirstPersonRenderer} */ firstPersonRenderer: null,
-            /** @type {MiniMapRenderer}     */ miniMapRenderer: null,
+            /** @type {MiniMap}     */ miniMapRenderer: null,
 
             firstPersonWindow: new AsciiWindow(document.getElementById("viewport"), 80, 45), // MAGIC CONSTANTS
-            minimapWindow: new AsciiWindow(document.getElementById("minimap"), 9, 9), // MAGIC CONSTANT
+            minimapWindow: new AsciiWindow(document.getElementById("minimap"), 15, 15), // MAGIC CONSTANT
 
             options: DefaultRendererOptions,
         };
 
-        /** @readonly @type {MiniMapRenderer} */
         this.player = new Player();
 
         this.setupControls();
@@ -151,30 +150,33 @@ class DungeonCrawler {
     loadMap() {
         const mapString = document.getElementById("mapText").value;
 
-        this.map = TileMap.fromText(mapString);
+        this.map = TileMap.fromHumanText(mapString);
 
-        this.player._posV = this.map.findFirst({ isStartLocation: true });
+        this.player._posV = this.map.findFirstV({ isStartLocation: true });
 
         if (!this.player._posV) {
             throw new Error("Could not find a start location for the player");
         }
 
-        this.rendering.miniMapRenderer = new MiniMapRenderer(this.rendering.minimapWindow, this.map);
+        this.rendering.miniMapRenderer = new MiniMap(
+            this.rendering.minimapWindow,
+            this.map,
+            this.rendering.options.viewDistance,
+        );
 
         this.rendering.firstPersonRenderer = new FirstPersonRenderer(
             this.rendering.firstPersonWindow,
             this.map,
-            ["./eobBlueWall.png", "gnoll.png"], // textures
             this.rendering.options,
         );
         this.rendering.firstPersonRenderer.onReady = () => {
             this.render();
             this.renderMinimap();
-            this.renderCompass();
+            this.renderStatus();
         };
     }
 
-    startTurnAnimation(quarterTurns = 1) {
+    startRotationAnimation(quarterTurns = 1) {
         if (this.isAnimating) {
             throw new Error("Cannot start an animation while one is already running");
         }
@@ -189,14 +191,14 @@ class DungeonCrawler {
             startX: this.player.x,
             startY: this.player.y,
 
-            targetAngle: this.player.angle + PI_OVER_TWO * quarterTurns,
+            targetAngle: this.player.angle - PI_OVER_TWO * quarterTurns,
             targetTime: performance.now() + 700, // MAGIC NUMBER: these animations take .7 seconds
             targetX: this.player.x,
             targetY: this.player.y,
         };
 
         //
-        this.player._directionV.rotateCCW(quarterTurns);
+        this.player._directionV.rotateCW(quarterTurns);
     }
 
     /** @type {RelativeMovement} Direction the player is going to move */
@@ -214,8 +216,27 @@ class DungeonCrawler {
         //
         // We cant move into walls
         if (!this.map.isTraversable(targetV.x, targetV.y)) {
+            const tile = this.map.get(targetV.x, targetV.y);
+
+            //  _____ ___  ____   ___
+            // |_   _/ _ \|  _ \ / _ \ _
+            //   | || | | | | | | | | (_)
+            //   | || |_| | |_| | |_| |_
+            //   |_| \___/|____/ \___/(_)
+            // --------------------------
+            //
+            // Handle "Bumps"
+            //      Bumping into an encounter engages the enemy (requires confirmation, unless disabled)
+            //      Bumping into a wall you're looking at will inspect the wall, revealing hidden passages, etc.
+            //      Bumping into a door will open/remove it.
+            //      Bumping into stairs will go down/up (requires confirmation, unless disabled)
+            //      Bumping into a wall sconce will pick up the torch (losing the light on the wall, but gaining a torch that lasts for X turns)
+            //      Bumping into a trap activates it.
+            //      Bumping into a treasure opens it.
+
             console.info(
-                "bumped into an obstacle at %s (mypos: %s), direction=%d",
+                "bumped into %s at %s (mypos: %s), direction=%d",
+                tile.constructor.name,
                 targetV,
                 this.player._posV,
                 this.player.angle,
@@ -250,10 +271,10 @@ class DungeonCrawler {
             KeyW: () => this.startMoveAnimation(RelativeMovement.FORWARD),
             ArrowUp: () => this.startMoveAnimation(RelativeMovement.FORWARD),
             ArrowDown: () => this.startMoveAnimation(RelativeMovement.BACKWARD),
-            ArrowLeft: () => this.startTurnAnimation(1),
-            ArrowRight: () => this.startTurnAnimation(-1),
-            KeyQ: () => this.startTurnAnimation(1),
-            KeyE: () => this.startTurnAnimation(-1),
+            ArrowLeft: () => this.startRotationAnimation(-1),
+            ArrowRight: () => this.startRotationAnimation(1),
+            KeyQ: () => this.startRotationAnimation(-1),
+            KeyE: () => this.startRotationAnimation(1),
         };
         this.keys.names = Object.keys(this.keys.handlers);
 
@@ -304,7 +325,7 @@ class DungeonCrawler {
         if (this.animation.targetTime <= performance.now()) {
             this.render(this.player.x, this.player.y, this.player.angle);
             this.renderMinimap();
-            this.renderCompass();
+            this.renderStatus();
             this.animation = {};
             return false;
         }
@@ -370,14 +391,25 @@ class DungeonCrawler {
         setTimeout(() => this.gameLoop(), 50); // MAGIC NUMBER
     }
 
-    renderCompass() {
+    renderStatus() {
         //
         //
         // Update the compass
-        document.getElementById("compass").innerHTML = sprintf(
-            "<div>%s</div><div>%s</div>",
-            this.player._posV,
-            Object.keys(Orientation)[this.player.orientation].toLowerCase(),
+        document.getElementById("status").innerHTML = sprintf(
+            [
+                "<div>",
+                sprintf("You are in %s,", "[A HALLWAY?]"), // a hallway, an intersection, a cul-de-sac
+                sprintf("facing %s", Object.keys(Orientation)[this.player.orientation]),
+                sprintf("on map location %s", this.player._posV),
+                "</div>",
+                "<div>",
+                // ONLY RELEVANT IF Tile in front of player is non-empty
+                sprintf("Directly in front of you is", "TODO: a wall|a set of stairs going down|an enemy"),
+                "</div>",
+                "<div>",
+                sprintf("Ahead of you is %s", "TODO: more hallway | an enemy | etc"),
+                "</div>",
+            ].join(" "),
         );
     }
 }

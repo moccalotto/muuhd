@@ -5,13 +5,13 @@ export const PI_OVER_TWO = Math.PI / 2;
  * @constant @readonly @enum {number}
  */
 export const Orientation = {
-    /** @constant @readonly @type {number} Going east increases X */
-    EAST: 0,
-    /** @constant @readonly @type {number} Going south decreases Y */
+    /** @constant @readonly @type {number} */
+    WEST: 0,
+    /** @constant @readonly @type {number} */
     SOUTH: 1,
-    /** @constant @readonly @type {number} Going west decreases X */
-    WEST: 2,
-    /** @constant @readonly @type {number} Going south increases Y */
+    /** @constant @readonly @type {number} */
+    EAST: 2,
+    /** @constant @readonly @type {number} */
     NORTH: 3,
 };
 

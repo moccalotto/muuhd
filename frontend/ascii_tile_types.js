@@ -1,4 +1,5 @@
-import { Orientation } from "./ascii_types";
+import { ParsedCall } from "../utils/callParser";
+import { Orientation, Vector2i } from "./ascii_types";
 
 export class Tile {
     /** @type {string} How should this tile be rendered on the minimap.*/
@@ -6,7 +7,7 @@ export class Tile {
     /** @type {string} How should this tile be rendered on the minimap.*/
     minimapColor;
     /** @type {boolean} Should this be rendered as a wall? */
-    isWall;
+    looksLikeWall;
     /** @type {boolean} Can the player walk here? */
     isTraversable;
     /** @type {boolean} is this tile occupied by an encounter? */
@@ -28,12 +29,19 @@ export class Tile {
     /** @type {number|string} id the encounter located on this tile */
     encounterId;
     /** @type {boolean} Can/does this tile wander around on empty tiles? */
-    isWandering;
+    isRoaming;
     /** @type {Orientation} */
     orientation;
 
+    /** @type {number} If this is a roaming tile, what is its current x-position on the map */
+    currentPosX;
+    /** @type {number} If this is a roaming tile, what is its current y-position on the map*/
+    currentPosY;
+
+    static wallMinimapChar = "█";
+
     /** @param {Tile} options */
-    constructor(options) {
+    constructor(options = {}) {
         for (let [k, v] of Object.entries(options)) {
             if (this[k] !== undefined) {
                 this[k] = v;
@@ -41,26 +49,36 @@ export class Tile {
         }
     }
 
-    /** @param {Tile} options */
-    static fromChar(char, options = {}) {
-        switch (char) {
-            case " ":
-                return new FloorTile();
-            case "#":
-                return new WallTile();
-            case "P":
-                return new PlayerStartTile(options.orientation);
-            case "E":
-                return new EncounterTile(options.textureId, options.encounterId);
-            case "O":
-                return new SecretOneWayPortalEntryTile(options.channel);
-            case "o":
-                return new SecretOneWayPortalExitTile(options.channel);
-            case "Z":
-                return new SecretTwoWayPortalTile(options.channel);
-            default:
-                throw new Error("Unknown character: " + char);
+    /**
+     * @param {string} char
+     * @param {ParsedCall} opt Options
+     * @param {number} x
+     * @param {number} y
+     */
+    static fromChar(char, opt, x, y) {
+        opt = opt ?? new ParsedCall();
+        if (!(opt instanceof ParsedCall)) {
+            console.error("Invalid options", { char, opt: opt });
+            throw new Error("Invalid options");
         }
+        if (char === " ") return new FloorTile();
+        if (char === "#") return new WallTile();
+        if (char === "P") return new PlayerStartTile(opt.getValue("orientation", 0));
+        if (char === "E") return new EncounterTile(x, y, opt.getValue("encounterId", 0), opt.getValue("textureId", 1));
+        if (char === "O") return new SecretOneWayPortalEntryTile(opt.getValue("channel", 0));
+        if (char === "o") return new SecretOneWayPortalExitTile(opt.getValue("channel", 0));
+        if (char === "Z") return new SecretTwoWayPortalTile(opt.getValue("channel", 0));
+
+        console.warn("Unknown character", { char, options: opt });
+        return new FloorTile();
+    }
+
+    hasTexture() {
+        if (this.textureId === "") {
+            return false;
+        }
+
+        return typeof this.textureId === "number" || typeof this.textureId === "string";
     }
 
     clone() {
@@ -70,14 +88,15 @@ export class Tile {
 
 export class FloorTile extends Tile {
     isTraversable = true;
-    minimapChar = " ";
+    minimapChar = "·";
+    minimapColor = "#555";
     internalMapChar = " ";
 }
 
 export class PlayerStartTile extends Tile {
     isTraversable = true;
     isStartLocation = true;
-    MinimapChar = "▤"; // stairs
+    minimapChar = "▤"; // stairs
     orientation = Orientation.NORTH;
 
     /** @param {Orientation} orientation */
@@ -87,17 +106,34 @@ export class PlayerStartTile extends Tile {
 }
 
 export class WallTile extends Tile {
-    textureId = 0;
+    textureId = "wall";
     isTraversable = false;
-    isWall = true;
-    minimapChar = "#";
+    looksLikeWall = true;
     internalMapChar = "#";
+    minimapChar = Tile.wallMinimapChar;
+    minimapColor = "#aaa";
 }
 
 export class EncounterTile extends Tile {
     isEncounter = true;
-    constructor(textureId, encounterId) {
-        super({ textureId, encounterId });
+    isRoaming = true;
+    minimapChar = "†";
+    minimapColor = "#faa";
+
+    constructor(x, y, encounterId, textureId) {
+        super();
+        this.textureId = textureId ?? encounterId;
+        this.encounterId = encounterId;
+        this.currentPosX = x;
+        this.currentPosY = y;
+        console.info("creating encounter", { encounter: this });
+    }
+}
+export class SpriteTile extends Tile {
+    isTraversable = true;
+    constructor(textureId, orientation) {
+        console.debug({ textureId, orientation });
+        super({ textureId, orientation: orientation ?? Orientation.NORTH });
     }
 }
 
@@ -106,42 +142,46 @@ export class EncounterTile extends Tile {
  * probe for them, or otherwise unlock their location.
  * You can walk into them, and then the magic happens
  */
-export class SecretOneWayPortalEntryTile extends Tile {
+export class SecretOneWayPortalEntryTile extends WallTile {
     textureId = 0;
-    isWall = true;
+    looksLikeWall = true;
     isTraversable = true; // we can walk in to it?
     isOneWayPortalEntry = true;
     internalMapChar = "O";
-    minimapChar = "#"; // Change char when the portal has been uncovered
     isUncovered = false;
+
+    // Change minimap char once the tile's secret has been uncovered.
 
     constructor(channel) {
         super({ channel });
     }
 }
 
-export class SecretOneWayPortalExitTile extends Tile {
-    isTraversable = true;
+export class SecretOneWayPortalExitTile extends FloorTile {
     isOneWayPortalExit = true;
     internalMapChar = "o";
-    minimapChar = " "; // Change char when the portal has been uncovered
     isUncovered = false;
+    //
+    // Change minimap char once the tile's secret has been uncovered.
 
     constructor(channel) {
         super({ channel });
     }
 }
 
-export class SecretTwoWayPortalTile extends Tile {
-    textureId = 0;
-    isWall = true;
+export class SecretTwoWayPortalTile extends WallTile {
     isTraversable = true;
     isTwoWayPortalEntry = true;
     internalMapChar = "0";
-    minimapChar = "#"; // Change char when the portal has been uncovered
     isUncovered = false;
+
+    // Change minimap char once the tile's secret has been uncovered.
 
     constructor(channel) {
         super({ channel });
     }
+}
+
+if (Math.PI < 0 && ParsedCall && Orientation && Vector2i) {
+    ("STFU Linda");
 }
