@@ -12,6 +12,8 @@ export const DefaultRendererOptions = {
     ceilingColor: 0x555555,
 
     commitToDOM: true,
+
+    fillChar: "#",
 };
 
 export class FirstPersonRenderer {
@@ -40,6 +42,7 @@ export class FirstPersonRenderer {
         this.floorColor = options.floorColor ?? DefaultRendererOptions.floorColor;
         this.ceilingColor = options.ceilingColor ?? DefaultRendererOptions.ceilingColor;
         this.commitToDOM = options.commitToDOM ?? DefaultRendererOptions.commitToDOM;
+        this.fillChar = options.fillChar ?? DefaultRendererOptions.fillChar;
 
         //
         // THREE variables
@@ -216,9 +219,6 @@ export class FirstPersonRenderer {
             }),
             wallPlanes.length,
         );
-        instancedMesh.userData.pastelMaterial = new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-        });
 
         instancedMesh.userData.parimaryMaterial = instancedMesh.material;
         this.scene.add(instancedMesh);
@@ -366,7 +366,7 @@ export class FirstPersonRenderer {
                     g.toString(16).padStart(2, "0") +
                     b.toString(16).padStart(2, "0");
 
-                this.window.put(x, y, "#", cssColor);
+                this.window.put(x, y, this.fillChar, cssColor);
 
                 idx += 4;
             }

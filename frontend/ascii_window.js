@@ -50,6 +50,14 @@ export class AsciiWindow {
         this.initializeCanvaas();
     }
 
+    fill(char = " ", color = "#000") {
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                this.put(x, y, char, color);
+            }
+        }
+    }
+
     /**
      * Create the html elements that make up the canvas,
      * as well as a buffer that holds a copy of the data

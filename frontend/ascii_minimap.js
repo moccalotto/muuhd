@@ -4,7 +4,7 @@ import { AsciiWindow } from "./ascii_window.js";
 
 export class MiniMap {
     /**
-     * @param {AsciiWindow} aWindow
+     * @param {AsciiWindowInterface} aWindow
      * @param {TileMap} map
      */
     constructor(aWindow, map) {
@@ -174,10 +174,10 @@ export class MiniMap {
 
         //
         y = startY;
-        for (let mapY = minY; mapY < maxY; mapY++) {
+        for (let mapY = minY; mapY <= maxY; mapY++) {
             //
             x = startX;
-            for (let mapX = minX; mapX < maxX; mapX++) {
+            for (let mapX = minX; mapX <= maxX; mapX++) {
                 //
                 const [putX, putY] = switchXY ? [y, x] : [x, y];
 
@@ -186,13 +186,12 @@ export class MiniMap {
                     this.window.put(putX, putY, tile.minimapChar, tile.minimapColor);
                 } else {
                     // this.window.put(putX, putY, "░", "#666");
-                    this.window.put(putX, putY, " ", "#666");
+                    this.window.put(putX, putY, "█", "#222");
                 }
                 x += dX;
             }
             y += dY;
         }
-
         this.window.put(this.distance, this.distance, "@", "#4f4fff");
         this.window.commitToDOM();
     }
