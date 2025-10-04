@@ -6,11 +6,11 @@ export const PI_OVER_TWO = Math.PI / 2;
  */
 export const Orientation = {
     /** @constant @readonly @type {number} */
-    WEST: 0,
+    EAST: 0,
     /** @constant @readonly @type {number} */
     SOUTH: 1,
     /** @constant @readonly @type {number} */
-    EAST: 2,
+    WEST: 2,
     /** @constant @readonly @type {number} */
     NORTH: 3,
 };

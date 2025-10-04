@@ -49,7 +49,7 @@ class Player {
             return;
         }
         if (o === Orientation.NORTH) {
-            this._directionV = new Vector2i(0, 1);
+            this._directionV = new Vector2i(0, -1);
             return;
         }
         if (o === Orientation.WEST) {
@@ -57,7 +57,7 @@ class Player {
             return;
         }
         if (o === Orientation.SOUTH) {
-            this._directionV = new Vector2i(0, -1);
+            this._directionV = new Vector2i(0, 1);
             return;
         }
     }
