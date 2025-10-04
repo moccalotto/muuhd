@@ -15,49 +15,68 @@
 
             #gameContainer {
                 text-align: center;
+                display: grid;
+                grid-template-areas:
+                    "firstPerson minimap"
+                    "status status"
+                    "mapInput mapInput";
+            }
+
+            #status {
+                grid-area: status;
             }
 
             #viewport {
+                grid-area: firstPerson;
                 font-size: 10px;
                 line-height: 7px;
                 white-space: pre;
                 border: 2px solid #0f0;
                 display: inline-block;
                 padding: 2px;
-                border: 5px solid #666;
+                border-top: 1rem solid #666;
+                border-bottom: 1rem solid #666;
+                border-left: 1rem solid #666;
+                border-right: 1rem solid #666;
                 font-weight: bold;
             }
             #minimap {
+                grid-area: minimap;
                 font-size: 12px;
                 line-height: 11.5px;
                 white-space: pre;
                 display: inline-block;
                 padding: 2px;
                 border: 5px solid #666;
-                background-color: black;
-            }
-
-            #controls {
-                margin-top: 20px;
-                color: #0f0;
+                border-top: 1rem solid #666;
+                border-bottom: 1rem solid #666;
+                border-left: none;
+                border-right: 1rem solid #666;
+                font-weight: bold;
             }
 
             #mapInput {
+                grid-area: mapInput;
                 margin-top: 20px;
-                overflow-x: scroll;
+                overflow-x: visible;
                 overflow-wrap: normal;
             }
 
             textarea {
-                background-color: #001100;
+                background-color: #222;
                 color: #ccc;
-                border: 1px solid #0f0;
-                font-family: "Courier New", monospace;
                 padding: 10px;
+                border: 5px solid #666;
+                border-top: 1em solid #666;
+                border-bottom: 1em solid #666;
+                border-left: 1ch solid #666;
+                border-right: 1ch solid #666;
+                scrollbar-width: thin;
+                width: calc(100% - 1rem);
             }
 
             button {
-                background-color: #001100;
+                background-color: #222;
                 color: #0f0;
                 border: 1px solid #0f0;
                 padding: 5px 10px;
@@ -66,7 +85,7 @@
             }
 
             button:hover {
-                background-color: #002200;
+                background-color: #666;
             }
         </style>
     </head>
@@ -75,12 +94,8 @@
             <div id="viewport"></div>
             <div id="status">orientation</div>
             <div id="minimap"></div>
-
-            <div id="threejs" style="border: 2px solid green; background-color: #222"></div>
             <div id="mapInput">
-                ←→↑↓
-                <br />
-                <textarea id="mapText" rows="10" cols="120" wrap="off">
+                <textarea id="mapText" rows="10" wrap="off">
 ############################################################
 ############################################################
 ############################################################
@@ -123,7 +138,6 @@
 ############################################################
             </textarea
                 >
-                <br /><br />
                 <button onclick="game.loadMap()">Load Map</button>
             </div>
         </div>

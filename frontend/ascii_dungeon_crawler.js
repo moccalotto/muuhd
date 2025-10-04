@@ -104,14 +104,19 @@ class DungeonCrawler {
 
         /** @readonly */
         this.rendering = {
-            /** @type {FirstPersonRenderer} */ firstPersonRenderer: null,
-            /** @type {MiniMap}     */ miniMapRenderer: null,
-
-            firstPersonWindow: new AsciiWindow(document.getElementById("viewport"), 80, 45), // MAGIC CONSTANTS
-            minimapWindow: new AsciiWindow(document.getElementById("minimap"), 15, 15), // MAGIC CONSTANT
-
-            options: DefaultRendererOptions,
+            /** @type {FirstPersonRenderer}     */ firstPersonRenderer: null,
+            /** @type {MiniMap}                 */ miniMapRenderer: null,
+            /** @type {AsciiWindow}             */ firstPersonWindow: null,
+            /** @type {AsciiWindow}             */ minimapWindow: null,
+            /** @type {DefaultRendererOptions}  */ options: DefaultRendererOptions,
         };
+
+        ((this.rendering.firstPersonWindow = new AsciiWindow(document.getElementById("viewport"), 80, 45)), // MAGIC CONSTANTS
+            (this.rendering.minimapWindow = new AsciiWindow(
+                document.getElementById("minimap"),
+                this.rendering.options.viewDistance * 2 + 3,
+                this.rendering.options.viewDistance * 2 + 3,
+            )));
 
         this.player = new Player();
 
