@@ -95,6 +95,3 @@ export class Xorshift32 {
         return num + greaterThanOrEqual;
     }
 }
-
-const rng = new Xorshift32();
-console.log(rng.get());

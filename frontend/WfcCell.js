@@ -13,12 +13,12 @@ export class WfcCell {
      */
     constructor(i, x, y, options) {
         if (!options.length) {
-            console.log("Bad >>options<< arg in WfcCell constructor. Must not be empty.", options);
+            console.warn("Bad >>options<< arg in WfcCell constructor. Must not be empty.", options);
             throw Error("Bad >>options<< arg in WfcCell constructor. Must not be empty.", options);
         }
 
         if (!(options[0] instanceof SourceCell)) {
-            console.log("Bad >>options<< arg in WfcCell constructor. Must be array of WfcCells, but wasn't.", options);
+            console.warn("Bad >>options<< arg in WfcCell constructor. Must be array of WfcCells, but wasn't.", options);
             throw Error("Bad >>options<< arg in WfcCell constructor. Must be array of WfcCells, but wasn't.", options);
         }
 

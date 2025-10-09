@@ -35,8 +35,6 @@ export class MiniMap {
      * @param {Orientation}  orientation
      */
     draw(pX, pY, orientation) {
-        console.log("Updating minimap", { px: pX, py: pY, orientation });
-
         //
         // 2D array of tiles that are visible
         const visibleTiles = new Array(this.map.height).fill().map(() => new Array(this.map.width).fill(false));
@@ -151,12 +149,12 @@ export class MiniMap {
                 invertY = true;
                 break;
             case Orientation.EAST:
+                invertY = true;
+                invertX = true;
                 switchXY = true;
                 break;
             case Orientation.WEST:
                 switchXY = true;
-                invertY = true;
-                invertX = true;
                 break;
         }
 

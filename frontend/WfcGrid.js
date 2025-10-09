@@ -34,7 +34,6 @@ export class WfcGrid {
     }
 
     reset() {
-        console.log("Resetting Cells");
         const [w, h] = [this.width, this.height];
         const len = w * h;
         this.cells = [];
@@ -44,7 +43,6 @@ export class WfcGrid {
 
             this.cells.push(new WfcCell(i, x, y, this.sourceGrid.clone().cells));
         }
-        console.log("Done");
     }
 
     /**
@@ -87,7 +85,7 @@ export class WfcGrid {
         });
 
         if (this.lowEntropyCellIdCache.length === 0) {
-            console.log("Found zero lowest-entropy cells.", { entropy: this.lowestEntropy });
+            console.info("Found zero lowest-entropy cells.", { entropy: this.lowestEntropy });
         }
     }
 

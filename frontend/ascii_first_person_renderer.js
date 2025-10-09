@@ -82,23 +82,48 @@ export class FirstPersonRenderer {
         /** @type {THREE.Sprite[]} All roaming tiles that regularly needs their positions updated */
         this.roamers = [];
 
+        /** @type {number} how many asynchronous function returns are we waiting for? */
+        this.openAsyncs = 0;
+        /** @type {boolean} Are we ready to render? (have all resources been loaded?) */
+        this.ready = false;
+        /** @type {function} called when the renderer is ready and all resources have been loaded */
+        this.onReady = null;
+
         //
         this.initMap();
 
         //
         this.renderer.setSize(this.asciiWidth * 1, this.asciiHeight * 1);
-        this.renderFrame();
+
+        const waitForAsyncs = () => {
+            if (this.ready) {
+                return;
+            }
+            if (this.openAsyncs > 0) {
+                setTimeout(waitForAsyncs, 100);
+                return;
+            }
+
+            this.ready = true;
+            if (typeof this.onReady === "function") {
+                this.onReady();
+                return;
+            }
+
+            this.renderFrame();
+        };
+        setTimeout(waitForAsyncs, 100);
     }
 
     getTexture(textureId) {
-        console.debug("fetching texture", { textureId });
         let texture = this.textures.get(textureId);
         if (!texture) {
-            console.debug("    miss... loading texture", { textureId });
+            this.openAsyncs++;
             texture = new THREE.TextureLoader().load(`${textureId}.png`, (t) => {
                 t.magFilter = THREE.NearestFilter; // no smoothing when scaling up
                 t.minFilter = THREE.NearestFilter; // no mipmaps / no smoothing when scaling down
                 t.generateMipmaps = false; // don’t build mipmaps
+                this.openAsyncs--;
             });
             this.textures.set(textureId, texture);
         }
@@ -111,12 +136,9 @@ export class FirstPersonRenderer {
     }
 
     getSpriteMaterial(textureId) {
-        console.debug("fetching material", { textureId });
-
         let material = this.spriteMaterials.get(textureId);
 
         if (!material) {
-            console.log("Creating material", { textureId });
             material = new THREE.SpriteMaterial({
                 map: this.getTexture(textureId),
                 transparent: true,
@@ -150,7 +172,6 @@ export class FirstPersonRenderer {
                 this.mainCamera.lookAt(x, y - 1, 0);
                 this.torch.position.copy(this.mainCamera.position);
 
-                console.log("Initial Camera Position:", this.mainCamera.position);
                 return;
             }
 
@@ -184,7 +205,8 @@ export class FirstPersonRenderer {
         // ---------------------------
         const floorGeo = new THREE.PlaneGeometry(this.map.width, this.map.height);
         const floorMat = new THREE.MeshStandardMaterial({
-            color: this.floorColor /* side: THREE.DoubleSide */,
+            color: this.floorColor,
+            /* side: THREE.DoubleSide */
         });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.position.set(this.map.width / 2, this.map.height / 2, -0.5);

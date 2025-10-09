@@ -76,8 +76,6 @@ class MUDClient {
         // TODO Fix. Port should not be hardcoded
         const wsUrl = `${protocol}//${window.location.host}`.replace(/:\d+$/, ":3000");
 
-        console.log(wsUrl);
-
         this.updateStatus("Connecting...", "connecting");
 
         try {
@@ -106,7 +104,7 @@ class MUDClient {
             };
 
             this.websocket.onerror = (error) => {
-                console.log("Websocket error", error);
+                console.warn("Websocket error", error);
                 this.updateStatus("Connection Error", "error");
                 this.writeToOutput("Connection error occurred. Retrying...", { class: "error" });
             };
@@ -137,7 +135,7 @@ class MUDClient {
      * @param {...any} rest
      */
     send(messageType, ...args) {
-        console.log("sending", messageType, args);
+        console.debug("sending", messageType, args);
 
         if (args.length === 0) {
             this.websocket.send(JSON.stringify([messageType]));
@@ -202,7 +200,6 @@ class MUDClient {
         // The quit command has its own message type
         let help = helpRegex.exec(inputText);
         if (help) {
-            console.log("here");
             help[1] ? this.send(MessageType.HELP, help[1].trim()) : this.send(MessageType.HELP);
             this.echo(inputText);
             return;

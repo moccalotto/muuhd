@@ -202,14 +202,14 @@ class MudServer {
         //
         // Handle system messages
         if (msgObj.isSysMessage()) {
-            console.log("SYS message", msgObj);
+            console.debug("SYS message", msgObj);
             return;
         }
 
         //
         // Handle debug messages
         if (msgObj.isDebug()) {
-            console.log("DBG message", msgObj);
+            console.debug("DBG message", msgObj);
             return;
         }
 

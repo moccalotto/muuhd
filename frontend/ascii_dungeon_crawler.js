@@ -40,6 +40,7 @@ class Player {
     }
 
     set orientation(o) {
+        console.log({ o });
         //
         // Sanitize o
         o = ((o | 0) + 4) % 4;
@@ -137,19 +138,23 @@ class DungeonCrawler {
      * @param {number} angle the orientation of the camera in radians around the unit circle.
      */
     render(camX = this.player.x, camY = this.player.y, angle = this.player.angle) {
-        if (!this.rendering.firstPersonRenderer) {
-            console.log("Renderer not ready yet");
+        if (!(this.rendering.firstPersonRenderer && this.rendering.firstPersonRenderer.ready)) {
+            console.warn("Renderer not ready yet");
             return;
         }
-        this.rendering.firstPersonRenderer.renderFrame(
-            camX, // add .5 to get camera into center of cell
-            camY, // add .5 to get camera into center of cell
-            angle,
-        );
+        queueMicrotask(() => {
+            this.rendering.firstPersonRenderer.renderFrame(
+                camX, // add .5 to get camera into center of cell
+                camY, // add .5 to get camera into center of cell
+                angle,
+            );
+        });
     }
 
     renderMinimap() {
-        this.rendering.miniMapRenderer.draw(this.player.x, this.player.y, this.player.orientation);
+        queueMicrotask(() => {
+            this.rendering.miniMapRenderer.draw(this.player.x, this.player.y, this.player.orientation);
+        });
     }
 
     loadMap() {
@@ -158,6 +163,8 @@ class DungeonCrawler {
         this.map = TileMap.fromHumanText(mapString);
 
         this.player._posV = this.map.findFirstV({ isStartLocation: true });
+        this.player.orientation = this.map.findFirstTile({ isStartLocation: true }).orientation;
+        console.log(this.player);
 
         if (!this.player._posV) {
             throw new Error("Could not find a start location for the player");
@@ -236,8 +243,8 @@ class DungeonCrawler {
             //      Bumping into a door will open/remove it.
             //      Bumping into stairs will go down/up (requires confirmation, unless disabled)
             //      Bumping into a wall sconce will pick up the torch (losing the light on the wall, but gaining a torch that lasts for X turns)
-            //      Bumping into a trap activates it.
-            //      Bumping into a treasure opens it.
+            //      Bumping into a trap activates it (or reveals it if someone on the team detects it, or of a detect trap spell is running)
+            //      Bumping into loot reveals it
 
             console.info(
                 "bumped into %s at %s (mypos: %s), direction=%d",
@@ -328,10 +335,10 @@ class DungeonCrawler {
         //
         // Guard: stop animation if it took too long
         if (this.animation.targetTime <= performance.now()) {
+            this.animation = {};
             this.render(this.player.x, this.player.y, this.player.angle);
             this.renderMinimap();
             this.renderStatus();
-            this.animation = {};
             return false;
         }
 
@@ -399,7 +406,7 @@ class DungeonCrawler {
     renderStatus() {
         //
         //
-        // Update the compass
+        // Update the compass and status
         document.getElementById("status").innerHTML = sprintf(
             [
                 "<div>",

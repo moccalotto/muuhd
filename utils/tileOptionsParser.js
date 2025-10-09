@@ -1,7 +1,7 @@
 /** A call represents the name of a function as well as the arguments passed to it */
-export class ParsedCall {
+export class TileOptions {
     /** @type {string} Name of the function             */ name;
-    /** @type {ParsedArg[]} Args passed to function     */ args;
+    /** @type {TileArgs[]} Args passed to function     */ args;
 
     constructor(name, args) {
         this.name = name;
@@ -14,7 +14,7 @@ export class ParsedCall {
      * @param {string} name
      * @param {number?} position
      *
-     * @returns {ParsedArg|null}
+     * @returns {TileArgs|null}
      */
     getArg(name, position) {
         for (let idx in this.args) {
@@ -32,10 +32,28 @@ export class ParsedCall {
         const arg = this.getArg(name, position);
         return arg ? arg.value : fallbackValue;
     }
+
+    /**
+     * @param {boolean} includePositionals Should the result object include numeric entries for the positional arguments?
+     * @returns {object} object where the keys are the names of the named args, and the values are the values of those args.
+     */
+    getNamedValues(includePositionals = false) {
+        const result = {};
+
+        for (const arg of this.args) {
+            const key = arg.key;
+
+            if (includePositionals || typeof key === "string") {
+                result[key] = arg;
+            }
+        }
+
+        return result;
+    }
 }
 
 /** An argument passed to a function. Can be positional or named */
-export class ParsedArg {
+export class TileArgs {
     /** @type {string|number}                           */ key;
     /** @type {string|number|boolean|null|undefined}    */ value;
     constructor(key, value) {
@@ -45,11 +63,11 @@ export class ParsedArg {
 }
 
 /**
- * Parse a string that includes a number of function calls separated by ";" semicolons
+ * Parse a string of options that looks like function calls separated by ";" semicolons
  *
  * @param {string} input
  *
- * @returns {ParsedCall[]}
+ * @returns {TileOptions[]}
  *
  * @example
  * // returns
@@ -64,7 +82,7 @@ export class ParsedArg {
  */
 export default function parse(input) {
     const calls = [];
-    const pattern = /(\w+)\s*\(([^)]*)\)/g; // TODO: expand so identifiers can be more than just \w characters - also limit identifiers to a single letter (maybne)
+    const pattern = /(\w+)\s*\(([^)]*)\)/gu;
     let match;
 
     while ((match = pattern.exec(input)) !== null) {
@@ -72,14 +90,13 @@ export default function parse(input) {
         const argsStr = match[2].trim();
         const args = parseArguments(argsStr);
 
-        // Hack to allow special characters in function names
-        // If function name is "__", then
-        // the actual function name is given by arg 0.
-        // Arg zero is automatically removed when the
-        // name is changed.
+        // Hack to allow special characters in option names
+        // If the option name is "__", then the actual
+        // option name is given by arg 0, and arg 0 is then
+        // automatically removed.
         //
         // So
-        //      __(foo, 1,2,3)  ===  foo(1,2,3)
+        //      __(foo, 1,2,3) ===  foo(1,2,3)
         //      __("·", 1,2,3) === ·(1,2,3)
         //      __("(", 1,2,3) === ((1,2,3)
         //      __('"', 1,2,3) === '(1,2,3)
@@ -88,7 +105,7 @@ export default function parse(input) {
             name = args.shift().value;
         }
 
-        calls.push(new ParsedCall(name, args));
+        calls.push(new TileOptions(name, args));
     }
 
     return calls;
@@ -96,12 +113,12 @@ export default function parse(input) {
 
 /**
  * @param {string} argsStr
- * @returns {ParsedArg[]}
+ * @returns {TileArgs[]}
  */
 function parseArguments(argsStr) {
     if (!argsStr) return [];
 
-    /** @type {ParsedArg[]} */
+    /** @type {TileArgs[]} */
     const args = [];
     const tokens = tokenize(argsStr);
 
@@ -109,9 +126,9 @@ function parseArguments(argsStr) {
         const token = tokens[pos];
         const namedMatch = token.match(/^(\w+)=(.+)$/);
         if (namedMatch) {
-            args.push(new ParsedArg(namedMatch[1], parseValue(namedMatch[2])));
+            args.push(new TileArgs(namedMatch[1], parseValue(namedMatch[2])));
         } else {
-            args.push(new ParsedArg(Number.parseInt(pos), parseValue(token)));
+            args.push(new TileArgs(Number.parseInt(pos), parseValue(token)));
         }
     }
 
@@ -156,7 +173,15 @@ function parseValue(str) {
 
     // Try to parse as number
     if (/^-?\d+(\.\d+)?$/.test(str)) {
-        return parseFloat(str);
+        const f = parseFloat(str);
+        const rounded = Math.round(f);
+        const diff = Math.abs(rounded - f);
+        const epsilon = 1e-6; // MAGIC NUMBER
+        if (diff < epsilon) {
+            return rounded;
+        }
+
+        return f;
     }
 
     // Boolean

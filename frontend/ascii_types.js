@@ -4,16 +4,47 @@ export const PI_OVER_TWO = Math.PI / 2;
  * Enum Cardinal Direction (east north west south)
  * @constant @readonly @enum {number}
  */
-export const Orientation = {
+export class Orientation {
     /** @constant @readonly @type {number} */
-    EAST: 0,
+    static EAST = 0;
     /** @constant @readonly @type {number} */
-    SOUTH: 1,
+    static SOUTH = 1;
     /** @constant @readonly @type {number} */
-    WEST: 2,
+    static WEST = 2;
     /** @constant @readonly @type {number} */
-    NORTH: 3,
-};
+    static NORTH = 3;
+
+    /**
+     * @param {string} str
+     * @returns {Orientation}
+     */
+    static fromString(str) {
+        if (typeof str !== "string") {
+            console.error(
+                "Invalid data type when converting string to orientation. >>str<< is not a string be string.",
+                { str },
+            );
+            return undefined;
+        }
+        str = str.toLowerCase();
+        if (str === "east") return Orientation.EAST;
+        if (str === "west") return Orientation.WEST;
+        if (str === "north") return Orientation.NORTH;
+        if (str === "south") return Orientation.SOUTH;
+    }
+
+    /**
+     * @param {string|number} val
+     * @returns {Orientation}
+     */
+    static normalize(val) {
+        if (typeof val === "string") {
+            return Orientation.fromString(val);
+        }
+
+        return val % 4;
+    }
+}
 
 /**
  * Enum Relative Direction (forward, left, right, backwards)
@@ -190,3 +221,7 @@ export class Vector2i {
         return `[${this.x} , ${this.y}]`;
     }
 }
+
+const o = Orientation.fromString("south");
+
+console.log(o);

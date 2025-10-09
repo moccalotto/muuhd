@@ -41,7 +41,7 @@ export class SourceCell {
     potentialNeighbours(other, direction) {
         // sadly, we're not allowed to be friends with ourselves.
         if (this === other) {
-            console.log("WTF were checking to be friends with ourselves!", { _this: this, other, direction });
+            console.warn("WTF were checking to be friends with ourselves!", { _this: this, other, direction });
             // throw new Error("WTF were checking to be friends with ourselves!", { _this: this, other, direction });
         }
         return (

@@ -1,6 +1,34 @@
-import parseOptions, { ParsedCall } from "../utils/callParser.js";
-import { Tile } from "./ascii_tile_types.js";
+import parseOptions, { TileOptions } from "../utils/tileOptionsParser.js";
+import { Tile, WallTile } from "./ascii_tile_types.js";
 import { Vector2i } from "./ascii_types.js";
+
+/**
+ * @typedef {object} TileWithCoords
+ * @property {Tile} tile
+ * @property {number} x
+ * @property {number} y
+ */
+
+/**
+ * @typedef {Map<number,TileWithCoords>} TileCoordsHashTable
+ */
+
+/**
+ * @callback TileMapForEachCallback
+ * @param {Tile} tile
+ * @param {number} x
+ * @param {number} y
+ * @returns {undefined|any} If undefined is returned, the looping continues, but if anything else is returned, the loop halts, and the return value is passed along to the caller
+ */
+
+/**
+ * @readonly @constant @enum {string}
+ */
+export const CharType = {
+    SYSTEM: "internalMapChar",
+    MINIMAP: "minimapChar",
+    MINIMAP_REVEALED: "revealedMinimapChar",
+};
 
 export class TileMap {
     /**
@@ -22,7 +50,6 @@ export class TileMap {
             if (y === 0) {
                 // Infer the width of the map from the first line
                 mapWidth = tileStr.length;
-                console.log({ mapWidth });
             }
 
             // Create a new row in the 2d tiles array
@@ -31,8 +58,6 @@ export class TileMap {
             optionStr = optionStr ? optionStr.split(/\s*\/\//)[0] : false;
             const options = optionStr ? parseOptions(optionStr) : [];
             let lineWidth = 0;
-
-            options.length && console.log({ options, y });
 
             tileStr.split("").forEach((char, x) => {
                 //
@@ -59,26 +84,26 @@ export class TileMap {
 
     /**
      * @param {Tile[][]} tiles
-     * @param {Map<Tile,ParsedCall>} options
      */
     constructor(tiles) {
-        /** @constant @readonly @type {number} */
-        this.height = tiles.length;
-        /** @constant @readonly @type {number} */
-        this.width = tiles[0].length;
-        /** @constant @readonly @type {Tile[][]} */
-        this.tiles = tiles;
-
-        /** @type {Tile} when probing a coordinate outside the map, this is the tile that is returned */
-        this.outOfBoundsWall = this.findFirstV({ looksLikeWall: true });
+        /** @type {number}      */ this.height = tiles.length;
+        /** @type {number}      */ this.width = tiles[0].length;
+        /** @type {Tile[][]}    */ this.tiles = tiles;
+        /** @type {number}      */ this.playerStartX = undefined;
+        /** @type {number}      */ this.playerStartT = undefined;
+        /** @type {Tile}        */ this.outOfBoundsWall = this.getReferenceWallTile();
     }
 
-    toString() {
+    /**
+     * @param {CharType} charType
+     * @returns {string}
+     */
+    toString(charType = CharType.SYSTEM) {
         let result = "";
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
                 const tile = this.tiles[y][x];
-                result += tile.minimapChar;
+                result += tile[charType];
             }
             result += "\n";
         }
@@ -96,12 +121,12 @@ export class TileMap {
         return this.tiles[y][x];
     }
 
-    get(x, y) {
+    get(x, y, outOfBounds = this.outOfBoundsWall) {
         x |= 0;
         y |= 0;
 
         if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
-            return this.outOfBoundsWall;
+            return outOfBounds;
         }
 
         return this.tiles[y][x];
@@ -178,7 +203,7 @@ export class TileMap {
      * but _stops_ if fn() returns anything but `undefined`,
      * and then that return value is returned from `forEach`
      *
-     * @param { (tile, x,y) => any|undefined ) } fn
+     * @param {TileMapForEachCallback} fn
      * @returns any|undefined
      */
     forEach(fn) {
@@ -192,23 +217,82 @@ export class TileMap {
         }
     }
 
-    getArea(xMin, yMin, xMax, yMax) {
-        if (xMin > xMax) {
-            [xMin, xMax] = [xMax, xMin];
-        }
-        if (yMin > yMax) {
-            [yMin, yMax] = [yMax, yMin];
+    /**
+     * @returns {number}
+     */
+    getTraversableTileCount() {
+        let sum = 0;
+
+        this.forEach((tile) => {
+            if (tile.isTraversable) {
+                sum++;
+            }
+        });
+
+        return sum;
+    }
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {typeof Tile} tileClass
+     * @returns {TileWithCoords[]}
+     */
+    getCardinalAdjacentTiles(x, y, tileClass) {
+        /** @type {TileWithCoords[]} */
+        const result = [];
+
+        const testCoords = [
+            [x + 1, y],
+            [x - 1, y],
+            [x, y + 1],
+            [x, y + 1],
+        ];
+
+        for (const [_x, _y] of testCoords) {
+            const _tile = this.get(_x, _y, false);
+
+            if (_tile === false) {
+                // _x, _y was out of bounds, do not add it to result
+                continue;
+            }
+
+            if (tileClass && !(_tile instanceof tileClass)) {
+                // _tile was of invalid type, do not add it to result
+                continue;
+            }
+
+            result.push({ tile: _tile, x: _x, y: _y });
         }
 
-        const w = xMax - xMin + 1;
-        const h = yMax - yMin + 1;
+        return result;
+    }
+
+    /**
+     * @param {number} minX
+     * @param {number} minY
+     * @param {number} maxX
+     * @param {number} maxY
+     *
+     * @returns {TileMap}
+     */
+    getArea(minX, minY, maxX, maxY) {
+        if (minX > maxX) {
+            [minX, maxX] = [maxX, minX];
+        }
+        if (minY > maxY) {
+            [minY, maxY] = [maxY, minY];
+        }
+
+        const w = maxX - minX + 1;
+        const h = maxY - minY + 1;
         let iX = 0;
         let iY = 0;
 
         const tiles = new Array(h).fill().map(() => new Array(w));
 
-        for (let y = yMin; y <= yMax; y++) {
-            for (let x = xMin; x <= xMax; x++) {
+        for (let y = minY; y <= maxY; y++) {
+            for (let x = minX; x <= maxX; x++) {
                 const tile = this.tiles[y][x];
                 if (!tile) {
                     throw new Error("Dafuqq is happing here?");
@@ -222,11 +306,68 @@ export class TileMap {
         return new TileMap(w, h, tiles);
     }
 
-    getAreaAround(x, y, radius) {
-        return this.getArea(x - radius, y - radius, x + radius, y + radius);
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {number} manhattanRadius
+     */
+    getAreaAround(x, y, manhattanRadius) {
+        return this.getArea(
+            x - manhattanRadius, // minX
+            y - manhattanRadius, // minY
+            x + manhattanRadius, // maxX
+            y + manhattanRadius, // maxY
+        );
+    }
+
+    /**
+     * @param {number} startX
+     * @param {number} startY
+     * @returns {TileCoordsHashTable}
+     */
+    getAllTraversableTilesConnectedTo(startX, startY) {
+        /** @type {TileCoordsHashTable} */
+        const result = new Map();
+
+        const allTilesFlat = new Array(this.width * this.height).fill();
+
+        this.forEach((tile, x, y) => {
+            const idx = x + y * this.width;
+            allTilesFlat[idx] = { tile, x, y };
+        });
+
+        const inspectionStack = [startX + startY * this.width];
+
+        while (inspectionStack.length > 0) {
+            const idx = inspectionStack.pop();
+
+            const { tile, x, y } = allTilesFlat[idx];
+
+            if (!tile.isTraversable) {
+                continue; // Can't walk there, move on
+            }
+
+            if (result.has(idx)) {
+                continue; // Already been here, move on
+            }
+
+            result.set(idx, allTilesFlat[idx]);
+
+            // Add neighbors
+            const [minX, minY] = [1, 1];
+            const maxX = this.width - 2;
+            const maxY = this.height - 2;
+
+            if (y >= minY) inspectionStack.push(idx - this.width); // up
+            if (y <= maxY) inspectionStack.push(idx + this.width); // down
+            if (x >= minX) inspectionStack.push(idx - 1); // left
+            if (x <= maxX) inspectionStack.push(idx + 1); // right
+        }
+
+        return result;
     }
 }
 
-if (Math.PI < 0 && ParsedCall) {
+if (Math.PI < 0 && TileOptions && WallTile) {
     ("STFU Linda");
 }
