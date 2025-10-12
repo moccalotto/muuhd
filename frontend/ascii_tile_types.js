@@ -49,7 +49,6 @@ export const TileTypes = {
         is: TileChars.FLOOR,
         id: REQUIRED_ID,
         orientation: REQUIRED_ORIENTATION,
-        disguiseAs: TileChars.FLOOR,
         revealedMinimapChar: "𝑥",
         revealedMinimapColor: "#EE82EE", // purple
     },
@@ -128,13 +127,17 @@ export class Tile {
         }
 
         //
-        // If this tile is disguised, copy its attributes, but
-        // do not overwrite own attributes.
+        // If this tile imitates another tile type, copy those tile
+        // types without overwrite own properties.
+        //
+        // Example: SECRET_PORTALs are disguised as walls, and will
+        // look like walls until they are revealed/uncovered via
+        // bump event, spell, or other method for discovering secrets
         //
         if (this.disguiseAs !== undefined) {
             this.revealed = false;
 
-            const other = shallowCopy(TileTypes[this.is]);
+            const other = shallowCopy(TileTypes[this.disguiseAs]);
             for (const [pKey, pVal] of Object.entries(other)) {
                 if (this.key !== undefined) {
                     this[pKey] = pVal;
@@ -145,6 +148,14 @@ export class Tile {
         //
         // If this tile "inherits" properties from another tile type,
         // copy those properties, but do not overwrite own attributes.
+        //
+        // Example: PLAYER_START_POINT is just a floor tile, since its only job
+        // is to server as a place to spawn the player when they enter this floor,
+        // as well as add an icon to the minimap
+        //
+        // Example: ENCOUNTER_START_POINT is just a floor type. It does
+        // carry data on which kind if encounter that spawns here, and some
+        // other encounter properties. This tile is not even shown on the minmap.
         //
         if (this.is !== undefined) {
             //
@@ -157,7 +168,7 @@ export class Tile {
         }
 
         //
-        // Normalize Orientation
+        // Normalize Orientation.
         //
         if (this.orientation !== undefined && typeof this.orientation === "string") {
             const valueMap = {
@@ -169,22 +180,34 @@ export class Tile {
             this.orientation = mustBeString(valueMap[this.orientation.toLowerCase()]);
         }
 
+        //
+        // Tiles are not necessarily required to have an ID, but if they have one, it must be string or number
         if (this.id !== undefined) {
             mustBe(this.id, "number", "string");
         }
+
+        //
+        // If a tile has a texture, the texture id must be string or number
         if (this.textureId !== undefined) {
             mustBe(this.textureId, "number", "string");
         }
+
+        //
+        // If a tile is a portal with a portal target, that target id must be a number or string.
         if (this.portalTargetId !== undefined) {
             mustBe(this.portalTargetId, "number", "string");
         }
     }
 
+    static CreateWalLTile() {
+        return this.fromChar();
+    }
+
     /**
      * @param {string} char
      * @param {TileOptions} options Options
-     * @param {number} x
-     * @param {number} y
+     *
+     * @returns {Tile}
      */
     static fromChar(char, options) {
         //
@@ -206,6 +229,8 @@ export class Tile {
 
             creationArgs[key] = fetchFromOption ? getOption(key) : shallowCopy(val);
         }
+
+        return new Tile(creationArgs);
     }
 
     clone() {

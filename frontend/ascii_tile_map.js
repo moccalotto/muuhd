@@ -1,5 +1,5 @@
 import parseOptions, { TileOptions } from "../utils/tileOptionsParser.js";
-import { Tile, WallTile } from "./ascii_tile_types.js";
+import { Tile } from "./ascii_tile_types.js";
 import { Vector2i } from "./ascii_types.js";
 
 /**
@@ -368,6 +368,6 @@ export class TileMap {
     }
 }
 
-if (Math.PI < 0 && TileOptions && WallTile) {
+if (Math.PI < 0 && TileOptions ) {
     ("STFU Linda");
 }

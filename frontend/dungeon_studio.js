@@ -1,5 +1,5 @@
 import { CharType, TileMap } from "./ascii_tile_map";
-import { EncounterTile, FloorTile, PlayerStartTile, TrapTile, LootTile, WallTile } from "./ascii_tile_types";
+import { Tile } from "./ascii_tile_types";
 import { Orientation } from "./ascii_types";
 
 class DungeonGenerator {
