@@ -9,9 +9,12 @@
 
 import { isIdSane, miniUid } from "../utils/id.js";
 import { Xorshift32 } from "../utils/random.js";
-import { Character } from "./character.js";
-import { ItemAttributes, ItemBlueprint } from "./item.js";
+import { ItemBlueprint } from "./item.js";
 import { Player } from "./player.js";
+
+/** @typedef {import("./character.js").Character} Character */
+/** @typedef {import("./item.js").ItemAttributes} ItemAttributes */
+/** @typedef {import("./item.js").ItemBlueprint} ItemBlueprint */
 
 export class Game {
     _counter = 1_000_000;
@@ -117,10 +120,8 @@ export class Game {
      */
     getItemBlueprint(blueprintId) {
         if (!isIdSane(blueprintId)) {
-            throw new Error(`blueprintId >>${blueprintId}<< is insane!`);
+            throw new Error(`blueprintId >>${blueprintId}<< is not a valid id`);
         }
-        const tpl = this._itemBlueprints.get(blueprintId);
-
-        return tpl || undefined;
+        return this._itemBlueprints.get(blueprintId);
     }
 }

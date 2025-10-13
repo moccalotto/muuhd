@@ -1,9 +1,9 @@
-import WebSocket from "ws";
 import { Player } from "./player.js";
 import { mustBeString, mustBe } from "../utils/mustbe.js";
 import { Scene } from "../scenes/scene.js";
-import { gGame } from "./globals.js";
 import { formatMessage, MessageType } from "../utils/messages.js";
+
+/** @typedef {import("ws").WebSocket} WebSocket */
 
 export class Session {
     /** @type {WebSocket} */
