@@ -1,4 +1,4 @@
-import { Session } from "../models/session.js";
+/** @typedef {import("../models/session.js").Session} Session */
 
 const castle = `
                                                 ▄

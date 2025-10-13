@@ -5,6 +5,18 @@ import { frameText } from "../utils/tui.js";
 import { Config } from "../config.js";
 import { State } from "./state.js";
 
+//  _____ ___  ____   ___       ____                          _     _____
+// |_   _/ _ \|  _ \ / _ \ _   / ___|___  _ ____   _____ _ __| |_  |_   _|__
+//   | || | | | | | | | | (_) | |   / _ \| '_ \ \ / / _ \ '__| __|   | |/ _ \
+//   | || |_| | |_| | |_| |_  | |__| (_) | | | \ V /  __/ |  | |_    | | (_) |
+//   |_| \___/|____/ \___/(_)  \____\___/|_| |_|\_/ \___|_|   \__|   |_|\___/
+//
+//  ____
+// / ___|  ___ ___ _ __   ___  ___
+// \___ \ / __/ _ \ '_ \ / _ \/ __|
+//  ___) | (_|  __/ | | |  __/\__ \
+// |____/ \___\___|_| |_|\___||___/
+
 export class PartyCreationState extends State {
     /**
      * @proteted
@@ -16,7 +28,7 @@ export class PartyCreationState extends State {
 
     /** @param {Session} session */
     constructor(session) {
-        /** @type {Session} */
+        super();
         this.session = session;
     }
 
@@ -32,11 +44,7 @@ export class PartyCreationState extends State {
 
         this.sendText(createPartyLogo, { preformatted: true });
 
-        this.session.sendText([
-            "",
-            `Current party size: ${charCount}`,
-            `Max party size:     ${Config.maxPartySize}`,
-        ]);
+        this.session.sendText(["", `Current party size: ${charCount}`, `Max party size:     ${Config.maxPartySize}`]);
         const min = 1;
         const max = Config.maxPartySize - charCount;
         const prompt = [
@@ -46,32 +54,32 @@ export class PartyCreationState extends State {
 
         this.sendText(`You can create a party with ${min} - ${max} characters, how big should your party be?`);
 
-        /** @param {WebsocketMessage} message */
-        this.sendPrompt(prompt, (m) => this.receivePlayerCount(m));
+        /** @param {WebsocketMessage} m */
+        this.sendPrompt(prompt, (m) => this.receiveCharacterCount(m));
     }
 
     /** @param {WebsocketMessage} m */
-    receivePlayerCount(m) {
+    receiveCharacterCount(m) {
         if (m.isHelpRequest()) {
             return this.partySizeHelp();
         }
 
         if (!m.isInteger()) {
             this.sendError("You didn't enter an integer");
-            this.sendPrompt(prompt, (m) => this.receivePlayerCount(m));
+            this.sendPrompt(prompt, (m) => this.receiveCharacterCount(m));
             return;
         }
 
-        const numCharactersToCreate = Number(message.text);
-        if (numCharactersToCreate > max) {
+        const numCharactersToCreate = Number(m.text);
+        if (numCharactersToCreate > Config.maxPartySize) {
             this.sendError("Number too high");
-            this.sendPrompt(prompt, (m) => this.receivePlayerCount(m));
+            this.sendPrompt(prompt, (m) => this.receiveCharacterCount(m));
             return;
         }
 
-        if (numCharactersToCreate < min) {
+        if (numCharactersToCreate < 1) {
             this.sendError("Number too low");
-            this.sendPrompt(prompt, (m) => this.receivePlayerCount(m));
+            this.sendPrompt(prompt, (m) => this.receiveCharacterCount(m));
             return;
         }
 
@@ -80,7 +88,7 @@ export class PartyCreationState extends State {
 
     partySizeHelp() {
         this.sendText([
-            `Your party can consist of 1 to ${mps} characters.`,
+            `Your party can consist of 1 to ${Config.maxPartySize} characters.`,
             "",
             "* Large parties tend live longer",
             `* If you have fewer than ${Config.maxPartySize} characters, you can`,
@@ -94,4 +102,8 @@ export class PartyCreationState extends State {
         ]);
         return;
     }
+}
+
+if (Math.PI < 0 && Session && WebsocketMessage) {
+    ("STFU Linda");
 }

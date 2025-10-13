@@ -1,11 +1,8 @@
-import figlet from "figlet";
-import { gGame } from "../models/globals.js";
-import { Session } from "../models/session.js";
 import { Scene } from "./scene.js";
-import { MessageType, WebsocketMessage } from "../utils/messages.js";
-import { mustBe, mustBeString } from "../utils/mustbe.js";
-import { sprintf } from "sprintf-js";
 
+/** @typedef {import("../models/session.js").Session} Session */
+/** @typedef {import("../utils/message.js").WebsocketMessage} WebsocketMessage */
+/** @typedef {import("../utils/message.js").MessageType} MessageType */
 /**
  * @typedef {object} PromptMethods
  * @property {function(...any): any} [onColon_*] - Any method starting with "onColon_"
@@ -26,10 +23,6 @@ export class Prompt {
     get scene() {
         return this._scene;
     }
-
-    //
-    // Extra info about the prompt we send to the client.
-    promptOptions = undefined;
 
     /**
      * Dictionary of help topics.
@@ -159,7 +152,7 @@ export class Prompt {
      *
      * @param {WebsocketMessage} message  The incoming reply
      */
-    onReply(message) {}
+    onReply() {}
 
     /**
      * @overload
@@ -202,7 +195,7 @@ export class Prompt {
      * @param {string} errorMessage
      */
     calamity(...args) {
-        this.session.calamity();
+        this.session.calamity(...args);
     }
 
     //

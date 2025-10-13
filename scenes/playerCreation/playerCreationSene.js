@@ -1,5 +1,6 @@
 import { Config } from "../../config.js";
 import { gGame } from "../../models/globals.js";
+import { generateHash } from "../../utils/security.js";
 import { Scene } from "../scene.js";
 import { CreateUsernamePrompt } from "./createUsernamePrompt.js";
 
@@ -47,6 +48,6 @@ export class PlayerCreationScene extends Scene {
     passwordAccepted(password) {
         this.password = password;
         this.session.sendText("*_Success_* ✅ You will now be asked to log in again, sorry for that ;)");
-        this.player.setPasswordHash(security.generateHash(this.password));
+        this.player.setPasswordHash(generateHash(this.password));
     }
 }
