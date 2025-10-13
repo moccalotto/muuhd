@@ -199,7 +199,7 @@ export class Prompt {
     }
 
     //
-    // Easter ægg
+    // Easter ægg(with an æ)
     // Example of having a string as a colon-handler
-    onColon__pull_out_wand = "You cannot pull out your wand right now! But thanks for trying 😘🍌🍆";
+    onColon__pull_out_wand = "You cannot pull out your wand right now. Try again at a more appropriate time";
 }
