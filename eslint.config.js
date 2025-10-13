@@ -3,5 +3,18 @@ import globals from "globals";
 import { defineConfig } from "eslint/config";
 
 export default defineConfig([
-  { files: ["**/*.{js,mjs,cjs}"], plugins: { js }, extends: ["js/recommended"], languageOptions: { globals: globals.browser } },
+    {
+        //  Frontend config
+        files: ["./frontend/*.{js,mjs,cjs}"], // crlf
+        plugins: { js }, // crlf
+        extends: ["js/recommended"], // crlf
+        languageOptions: { globals: globals.browser },
+    },
+    {
+        //  Config starts here
+        files: ["**/*.{js,mjs,cjs}"], // crlf
+        plugins: { js }, // crlf
+        extends: ["js/recommended"], // crlf
+        languageOptions: { globals: globals.node },
+    },
 ]);
