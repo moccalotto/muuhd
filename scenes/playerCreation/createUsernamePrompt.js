@@ -1,8 +1,8 @@
 import { Prompt } from "../prompt.js";
 import * as security from "../../utils/security.js";
 import { gGame } from "../../models/globals.js";
-import { PlayerCreationScene } from "./playerCreationSene.js";
-import { Config } from "../../config.js";
+
+/** @typedef {import("./playerCreationScene.js").PlayerCreationScene} PlayerCreationScene */
 
 export class CreateUsernamePrompt extends Prompt {
     //

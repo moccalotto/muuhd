@@ -1,13 +1,13 @@
-import { WebsocketMessage } from "../utils/messages.js";
-import { Session } from "../models/session.js";
+/** @typedef {import("../models/session.js").Session} Session */
+/** @typedef {import("../util/messages.js").WebsocketMessage} WebsocketMessage */
 
 /** @interface */
 export class StateInterface {
     /** @param {Session} session */
-    constructor(session) {}
+    constructor(_session) {}
 
     onAttach() {}
 
     /** @param {WebsocketMessage} message */
-    onMessage(message) {}
+    onMessage(_message) {}
 }

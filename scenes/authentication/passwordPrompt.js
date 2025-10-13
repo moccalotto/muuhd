@@ -1,7 +1,8 @@
 import { Prompt } from "../prompt.js";
 import * as security from "../../utils/security.js";
 import { Config } from "../../config.js";
-import { AuthenticationScene } from "./authenticationScene.js";
+
+/** @typedef {import("./authentication.js").AuthenticationScene} AuthenticationScene */
 
 export class PasswordPrompt extends Prompt {
     //

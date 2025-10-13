@@ -71,9 +71,5 @@ export class CreatePasswordPrompt extends Prompt {
         }
 
         this.scene.passwordAccepted();
-
-        //
-        // Password was correct, go to main game
-        this.session.setState(new JustLoggedInState(this.session));
     }
 }

@@ -1,15 +1,10 @@
-import { Player } from "../../models/player.js";
 import { Prompt } from "../prompt.js";
-import * as security from "../../utils/security.js";
 import { gGame } from "../../models/globals.js";
-import { Config } from "../../config.js";
-import { AuthenticationScene } from "./authenticationScene.js";
+import * as security from "../../utils/security.js";
 
-/**
- * @class
- *
- * @property {AuthenticationScene} scene
- */
+/** @typedef {import("./authenticationScene.js").AuthenticationScene} AuthenticationScene */
+/** @typedef {import("../../models/player.js").Player} Player */
+
 export class UsernamePrompt extends Prompt {
     //
     promptText = [

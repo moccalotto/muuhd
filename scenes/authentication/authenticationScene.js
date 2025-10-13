@@ -1,8 +1,10 @@
 import { PasswordPrompt } from "./passwordPrompt.js";
-import { Player } from "../../models/player.js";
 import { Scene } from "../scene.js";
 import { UsernamePrompt } from "./usernamePrompt.js";
 import { PlayerCreationScene } from "../playerCreation/playerCreationSene.js";
+import { GameScene } from "../gameLoop/gameScene.js";
+
+/** @typedef {import("../../models/player.js").Player} Player */
 
 /** @property {Session} session */
 export class AuthenticationScene extends Scene {
@@ -31,7 +33,7 @@ export class AuthenticationScene extends Scene {
 
         this.session.sendText(["= Success!", "((but I don't know what to do now...))"]);
 
-        this.session.setScene("new JustLoggedInScene");
+        this.session.setScene(new GameScene());
     }
 
     /**

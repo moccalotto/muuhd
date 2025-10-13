@@ -1,8 +1,9 @@
 import { Scene } from "./scene.js";
 
 /** @typedef {import("../models/session.js").Session} Session */
-/** @typedef {import("../utils/message.js").WebsocketMessage} WebsocketMessage */
 /** @typedef {import("../utils/message.js").MessageType} MessageType */
+/** @typedef {import("../utils/message.js").WebsocketMessage} WebsocketMessage */
+
 /**
  * @typedef {object} PromptMethods
  * @property {function(...any): any} [onColon_*] - Any method starting with "onColon_"
@@ -16,7 +17,7 @@ import { Scene } from "./scene.js";
  * - onColon(...)
  */
 export class Prompt {
-    /** @private @readonly @type {Scene} */
+    /** @type {Scene} */
     _scene;
 
     /** @type {Scene} */
@@ -29,9 +30,13 @@ export class Prompt {
      * Keys: string matching /^[a-z]+$/ (topic name)
      * Values: string containing the help text
      *
+     * If you want truly custom help texts, you must override the onHelpFallback function,
+     * but overriding the onHelp() function gives you more control and skips this helpText
+     * dictionary entirely.
+     *
      * @constant
      * @readonly
-     * @type {Record<string, string>}
+     * @type {Record<string, string|string[]>}
      */
     helpText = {
         "": "Sorry, no help available. Figure it out yourself, adventurer", // default help text
@@ -43,7 +48,15 @@ export class Prompt {
         "((or type :quit to run away))", // strings in double parentheses is rendered shaded/faintly
     ];
 
-    /** @type {object|string} If string: the prompt's context (username, password, etc) of object, it's all the message's options */
+    /** @type {object|string} If string: the prompt's context (username, password, etc). If object: it's all the message's options */
+    /* @example
+     *
+     * // if the prompt expects a username
+     * promptOptions = { username : true };
+     *
+     * // if the prompt expects a password
+     * promptOptions = { password : true };
+     */
     promptOptions = {};
 
     /** @type {Session} */
@@ -57,6 +70,13 @@ export class Prompt {
             throw new Error("Expected an instance of >>Scene<< but got " + typeof scene);
         }
         this._scene = scene;
+
+        //
+        // Fix data formatting shorthand
+        // So lazy dev set property helpText = "fooo" instead of helpText = { "": "fooo" }.
+        if (typeof this.helpText === "string" || Array.isArray(this.helpText)) {
+            this.helpText = { "": this.helpText };
+        }
     }
 
     /**
@@ -68,18 +88,10 @@ export class Prompt {
         this.sendPrompt(this.promptText, this.promptOptions);
     }
 
-    /** Triggered when user types `:help` without any topic */
+    /** Triggered when user types `:help [some optional topic]` */
     onHelp(topic) {
-        let h = this.helpText;
-        if (typeof h === "string" || Array.isArray(h)) {
-            h = { "": h };
-        }
-
-        //
-        // Fix data formatting shorthand
-        // So lazy dev set help = "fooo" instead of help = { "": "fooo" }.
-        if (h[topic]) {
-            this.sendText(h[topic]);
+        if (this.helpText[topic]) {
+            this.sendText(this.helpText[topic]);
             return;
         }
 
@@ -129,7 +141,7 @@ export class Prompt {
     }
 
     /**
-     * Triggered when the player asks for help on a topic, and we dont have an onHelp_thatParticularTopic method.
+     * Triggered when the player asks for help on a topic, and we don't have an onHelp_thatParticularTopic method.
      *
      * @param {string} topic
      */

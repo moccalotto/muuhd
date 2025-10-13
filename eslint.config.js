@@ -9,6 +9,9 @@ export default defineConfig([
         plugins: { js }, // crlf
         extends: ["js/recommended"], // crlf
         languageOptions: { globals: globals.browser },
+        rules: {
+            "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+        },
     },
     {
         //  Config starts here
@@ -16,5 +19,8 @@ export default defineConfig([
         plugins: { js }, // crlf
         extends: ["js/recommended"], // crlf
         languageOptions: { globals: globals.node },
+        rules: {
+            "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+        },
     },
 ]);

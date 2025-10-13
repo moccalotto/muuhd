@@ -86,14 +86,15 @@ export class TileArgs {
  * @returns {TileOptions[]}
  *
  * @example
- * // returns
+ *
+ * parse(`O(1); P(orientation=north); E(Gnolls, texture=gnolls)`)
+ *
+ * // the string above will be parsed into:
  * // [
  * //     {name="O", args=[{ key: 0, value: 1 }]},
  * //     {name="P", args=[{ key: "orientation", value: "north" }]},
  * //     {name="E", args=[{ key: 0, value: "Gnolls" }, { key: "texture", value: "gnolls" }]},
  * // ];
- *
- * parse(`O(1); P(orientation=north); E(Gnolls, texture=gnolls)`)
  *
  */
 export default function parse(input) {
