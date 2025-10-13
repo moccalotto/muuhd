@@ -26,8 +26,12 @@ const _port = process.env.MUUHD_PORT || 3000;
 const _maxPlayers = process.env.MUUHD_MAX_PLAYERS || (_dev ? 3 : 40);
 
 //
-// How many characters can be in a player's party;
+// Highest number of characters allowed in a player's party
 const _maxPartySize = 4;
+
+//
+// Lowest number of characters allowed a player's party
+const _minPartySize = 1;
 
 //
 // When kicked out for too many failed password attempts, how long should the account be locked?
@@ -40,6 +44,20 @@ const _rngSeed = process.env.MUUHD_RNG_SEED || Date.now();
 //
 // Max size (in bytes) we allow incoming messages to be.
 const _maxIncomingMessageSize = 1024;
+
+//
+// Number of times the user can enter an invalid password before they get temporarily banned.
+const _maxFailedLogins = process.env.MUUHD_MAX_FAILED_LOGINS || 4;
+
+//
+//  Username must satisfy this regex
+const _usernameSanityRegex = /^[a-zA-Z0-9_]{4,}$/;
+
+//
+// Passwords hashes must satisfy this regex.
+// NOTE: that passwords are hashed by the client before transmission,
+// so the password itself is not constrained by this regex
+const _passwordHashSanityRegex = /^[a-zA-Z0-9_: -]{8,}$/;
 
 //
 //
@@ -55,7 +73,7 @@ const _maxIncomingMessageSize = 1024;
 // No need to change the code below this line.
 
 /** Config class */
-export const Config = {
+export const Config = Object.freeze({
     /** @readonly @type {string} the name of the environment we're running in */
     get env() {
         return _env || "prod";
@@ -86,6 +104,11 @@ export const Config = {
         return _maxPartySize | 0 || 4;
     },
 
+    /** @readonly @constant @type {number} Min number of characters in a party. */
+    get minPartySize() {
+        return _minPartySize | 0 || 1;
+    },
+
     /** @readonly @constant @constant {number} Number of failed logins allowed before user is locked out. Also known as Account lockout threshold */
     get() {
         return _maxFailedLogins | 0 || 4;
@@ -111,4 +134,14 @@ export const Config = {
     get maxIncomingMessageSize() {
         return _maxIncomingMessageSize | 0 || 1024;
     },
-};
+
+    /** @type {RegExp} regex to validate the password hash */
+    get passwordHashSanityRegex() {
+        return _passwordHashSanityRegex;
+    },
+
+    /** @type {RegExp} regex to validate the username */
+    get usernameSanityRegex() {
+        return _usernameSanityRegex;
+    },
+});
