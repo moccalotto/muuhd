@@ -1,11 +1,27 @@
 /** A call represents the name of a function as well as the arguments passed to it */
 export class TileOptions {
-    /** @type {string} Name of the function             */ name;
+    /** @type {string} Name of the function            */ name;
     /** @type {TileArgs[]} Args passed to function     */ args;
 
     constructor(name, args) {
         this.name = name;
         this.args = args;
+    }
+
+    /**
+     * @param {string} name
+     * @param {Record<string,any>} args
+     */
+    static fromObject(name, args) {
+        //
+        const result = new TileOptions(name, []);
+
+        for (const [k, v] of Object.entries(args)) {
+            const arg = new TileArgs(k, v);
+            result.args.push(arg);
+        }
+
+        return result;
     }
 
     /**
