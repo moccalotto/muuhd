@@ -3,13 +3,15 @@ import shallowCopy from "../utils/shallowCopy.js";
 import { TileOptions } from "../utils/tileOptionsParser.js";
 import { Orientation, Vector2i } from "./ascii_types.js";
 
+/** @typedef {string} TileTypeId - a string with a length of 1 */
+
 /**
  * Array of __internal__ characters used to identify tile types.
  * These are __not__ necessarily the characters used to display
  * the tile on the minimap - but they are used when serializing
  * the maps into a semi-human-readable text-format.
  *
- * @constant {Record<string,string}
+ * @enum {TileTypeId}
  */
 export const TileChars = Object.freeze({
     FLOOR: " ",
@@ -24,7 +26,7 @@ const REQUIRED_ID = Symbol("REQUIRED_ID");
 const REQUIRED_ORIENTATION = Symbol("REQUIRED_ORIENTATION");
 const REQUIRED_OCCUPANTS = Symbol("REQUIRED_OCCUPANTS");
 
-/** @type {Record<string,Tile>} */
+/** @type {Record<TileTypeId,Tile>} */
 export const TileTypes = {
     [TileChars.FLOOR]: {
         minimapChar: "·",
@@ -69,42 +71,69 @@ export const TileTypes = {
 export class Tile {
     /** @readonly {string?|number?} Unique (but optional) instance if of this tile */
     id;
-    /** @type {string} Icon char of tile */
+
+    /** @type {TileTypeId} Char that defines this tile */
+    typeId;
+
+    /** @type {TileTypeId} Icon char of tile */
     minimapChar;
+
     /** @type {string} Color of the icon of tile */
     minimapColor;
+
     /** @type {boolean} Can the player walk here? */
     isTraversable;
+
     /** @type {boolean} Should this be rendered as a wall? */
     looksLikeWall;
+
     /** @type {boolean} Is this where they player starts? */
     isStartLocation;
+
     /** @type {boolean} Is this a portal exit and/or entry */
     isPortal;
+
     /** @type {string|number} Where is the player transported if they enter the portal */
     portalTargetId;
+
     /** @type {number|string} id of texture to use */
     textureId;
+
     /** @type {number|string} type of encounter located on this tile. May or may not be unique*/
     encounterType;
+
     /** @type {number|string} type of trap located on this tile. May or may not be unique*/
     trapType;
+
     /** @type {Orientation} */
     orientation;
-    /** @type {TileType} This tile disguises itself as another tile, and its true properties are revealed later if event is triggered */
+
+    /** @type {TileTypeId} This tile disguises itself as another tile, and its true properties are revealed later if event is triggered */
     disguiseAs;
+
+    /** @type {TileTypeId} This tile "inherits" the properties of another tile type */
+    is;
+
     /** @type {boolean} Has the secret properties of this tile been revealed? */
     revealed;
-    /** @type {string} Icon char of tile after tile's secrets have been revealed */
+
+    /** @type {TileTypeId} Icon char of tile after tile's secrets have been revealed */
     revealedMinimapChar;
+
     /** @type {string} Color of the icon char of tile after tile's secrets have been revealed */
     revealedMinimapColor;
+
     /** @type {number|string} id of texture to use after the secrets of this tile has been revealed */
     revealedTextureId;
 
-    /** @param {Tile} properties */
-    constructor(properties) {
+    /**
+     * @param {TileTypeId} typeId
+     * @param {Tile?} properties
+     */
+    constructor(typeId, properties) {
         mustBe(properties, "object");
+
+        this.typeId = typeId;
 
         //
         // Copy props from properties.
@@ -199,26 +228,50 @@ export class Tile {
         }
     }
 
-    static CreateWalLTile() {
-        return this.fromChar();
+    /** @returns {Tile} */
+    static createWall() {
+        return this.fromChar(TileChars.WALL);
+    }
+
+    /** @returns {Tile} */
+    static createEncounterStartPoint() {
+        return this.fromChar(TileChars.ENCOUNTER_START_POINT);
+    }
+
+    /** @returns {Tile} */
+    static createFloor() {
+        return this.fromChar(TileChars.FLOOR);
+    }
+
+    /** @returns {Tile} */
+    static createPlayerStart(orientation) {
+        return this.fromChar(TileChars.PLAYER_START_POINT, { orientation });
     }
 
     /**
-     * @param {string} char
-     * @param {TileOptions} options Options
-     *
+     * Given a map symbol,
+     * @param {TileTypeId} typeId
+     * @param {TileOptions|Record<string,string>} options
      * @returns {Tile}
      */
-    static fromChar(char, options) {
-        //
-        // Validate Options
-        options = options ?? new TileOptions();
-        if (!(options instanceof TileOptions)) {
-            console.error("Invalid options", { char, opt: options });
-            throw new Error("Invalid options");
+    static fromChar(typeId, options) {
+        const typeInfo = TileTypes[typeId];
+
+        if (!typeInfo) {
+            console.log("unknown type id", { typeId });
+            throw new Error(`Unknown typeId >>>${typeId}<<<`);
         }
 
-        const typeInfo = TileTypes[char];
+        if (options === undefined) {
+            options = TileOptions.fromObject(typeId, TileTypes[typeId]);
+        }
+
+        //
+        // Normalize options into a TileOptions object,
+        //
+        if (!(options instanceof TileOptions)) {
+            options = TileOptions.fromObject(options);
+        }
 
         let optionPos = 0;
         const creationArgs = {};
@@ -230,11 +283,39 @@ export class Tile {
             creationArgs[key] = fetchFromOption ? getOption(key) : shallowCopy(val);
         }
 
-        return new Tile(creationArgs);
+        return new Tile(typeId, creationArgs);
     }
 
     clone() {
         return new this.constructor(this);
+    }
+
+    isWallLike() {
+        if (this.is === TileChars.WALL) {
+            return true;
+        }
+
+        if (this.disguiseAs === TileChars.WALL) {
+            return true;
+        }
+
+        return this.looksLikeWall && !this.isTraversable;
+    }
+
+    isFloorlike() {
+        if (this.is === TileChars.FLOOR) {
+            return true;
+        }
+
+        if (this.disguiseAs === TileChars.FLOOR) {
+            return true;
+        }
+
+        return this.isTraversable;
+    }
+
+    isFloor() {
+        return this.typeId === TileChars.FLOOR;
     }
 }
 

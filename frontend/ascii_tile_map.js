@@ -132,7 +132,7 @@ export class TileMap {
         return this.tiles[y][x];
     }
 
-    looksLikeWall(x, y) {
+    behavesLikeWall(x, y) {
         x |= 0;
         y |= 0;
 
@@ -145,10 +145,10 @@ export class TileMap {
             return true;
         }
 
-        return this.tiles[y][x].looksLikeWall;
+        return this.tiles[y][x].isWallLike();
     }
 
-    isTraversable(x, y) {
+    behavesLikeFloor(x, y) {
         x |= 0;
         y |= 0;
 
@@ -156,7 +156,7 @@ export class TileMap {
             return true;
         }
 
-        return this.tiles[y][x].isTraversable;
+        return this.tiles[y][x].isFloorlike();
     }
 
     /**
@@ -220,11 +220,11 @@ export class TileMap {
     /**
      * @returns {number}
      */
-    getTraversableTileCount() {
+    getFloorlikeTileCount() {
         let sum = 0;
 
         this.forEach((tile) => {
-            if (tile.isTraversable) {
+            if (tile.isFloorlike()) {
                 sum++;
             }
         });
@@ -368,6 +368,6 @@ export class TileMap {
     }
 }
 
-if (Math.PI < 0 && TileOptions ) {
+if (Math.PI < 0 && TileOptions) {
     ("STFU Linda");
 }

@@ -9,7 +9,7 @@ class DungeonGenerator {
         this.corridors = [];
 
         // 2d array of pure wall tiles
-        const tiles = new Array(height).fill().map(() => Array(width).fill(new WallTile()));
+        const tiles = new Array(height).fill().map(() => Array(width).fill(Tile.createWall()));
 
         this.map = new TileMap(tiles);
     }
@@ -73,7 +73,7 @@ class DungeonGenerator {
     carveRoom(room) {
         for (let y = room.y; y < room.y + room.height; y++) {
             for (let x = room.x; x < room.x + room.width; x++) {
-                this.map.tiles[y][x] = new FloorTile();
+                this.map.tiles[y][x] = Tile.createFloor();
             }
         }
     }
@@ -115,7 +115,7 @@ class DungeonGenerator {
             let lastNonWallX = undefined; // x-index of the LAST (eastmost) non-wall tile that we encountered on this row
 
             for (let x = 0; x < this.width; x++) {
-                const isWall = this.map.get(x, y) instanceof WallTile;
+                const isWall = this.map.get(x, y).looksLikeWall;
 
                 if (isWall) {
                     continue;
@@ -152,24 +152,24 @@ class DungeonGenerator {
         const newTiles = [];
 
         // First row is all walls
-        newTiles.push(new Array(newWidth).fill(new WallTile()));
+        newTiles.push(new Array(newWidth).fill(Tile.createWall()));
 
         // Populate the new grid
         for (let y = dungeonStartY; y <= dungeonEndY; y++) {
             const row = [];
 
-            row.push(new WallTile()); // Initial wall tile on this row
+            row.push(Tile.createWall()); // Initial wall tile on this row
             for (let x = dungeonStartX; x <= dungeonEndX; x++) {
                 /**/
                 const tile = this.map.get(x, y);
                 row.push(tile);
             }
-            row.push(new WallTile()); // Final wall tile on this row
+            row.push(Tile.createWall()); // Final wall tile on this row
             newTiles.push(row);
         }
 
         // Final row is all walls
-        newTiles.push(new Array(newWidth).fill(new WallTile()));
+        newTiles.push(new Array(newWidth).fill(Tile.createWall()));
 
         this.map = new TileMap(newTiles);
     }
@@ -201,7 +201,7 @@ class DungeonGenerator {
 
         while (x !== x2 || y !== y2) {
             if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
-                this.map.tiles[y][x] = new FloorTile();
+                this.map.tiles[y][x] = Tile.createFloor();
             }
 
             if (x !== x2) x += dx;
@@ -210,7 +210,7 @@ class DungeonGenerator {
 
         // Ensure endpoint is carved
         if (x2 >= 0 && x2 < this.width && y2 >= 0 && y2 < this.height) {
-            this.map.tiles[y2][x2] = new FloorTile();
+            this.map.tiles[y2][x2] = Tile.createFloor();
         }
     }
 
@@ -226,7 +226,7 @@ class DungeonGenerator {
                     continue;
                 }
 
-                if (this.map.isTraversable(x, y)) {
+                if (this.map.behavesLikeFloor(x, y)) {
                     walkabilityCache.push([x, y]);
                 }
             }
@@ -244,7 +244,7 @@ class DungeonGenerator {
 
         for (let [x, y] of walkabilityCache) {
             //
-            const walkable = (offsetX, offsetY) => this.map.isTraversable(x + offsetX, y + offsetY);
+            const walkable = (offsetX, offsetY) => this.map.behavesLikeFloor(x + offsetX, y + offsetY);
 
             const surroundingFloorCount =
                 0 +
@@ -264,7 +264,7 @@ class DungeonGenerator {
 
             if (surroundingFloorCount >= 7) {
                 // MAGIC NUMBER 7
-                this.map.tiles[y][x] = new WallTile();
+                this.map.tiles[y][x] = Tile.createWall();
             }
         }
     }
@@ -281,7 +281,7 @@ class DungeonGenerator {
                     continue;
                 }
 
-                if (this.map.isTraversable(x, y)) {
+                if (this.map.behavesLikeFloor(x, y)) {
                     walkabilityCache.push([x, y]);
                 }
             }
@@ -290,7 +290,7 @@ class DungeonGenerator {
         const idx = this.random(0, walkabilityCache.length - 1);
         const [x, y] = walkabilityCache[idx];
 
-        const walkable = (offsetX, offsetY) => this.map.isTraversable(x + offsetX, y + offsetY);
+        const walkable = (offsetX, offsetY) => this.map.behavesLikeFloor(x + offsetX, y + offsetY);
 
         //
         // When spawning in, which direction should the player be oriented?
@@ -301,14 +301,16 @@ class DungeonGenerator {
         if (walkable(-1, +0)) directions.push(Orientation.WEST);
         if (walkable(+0, -1)) directions.push(Orientation.SOUTH);
 
+        // Player's initial orientation is randomized in such a way that
+        // they don't face a wall upon spawning.
         const dirIdx = this.random(0, directions.length - 1);
 
-        this.map.tiles[y][x] = new PlayerStartTile(directions[dirIdx]);
+        this.map.tiles[y][x] = Tile.createPlayerStart(directions[dirIdx]);
     }
 
     // Add portals to isolated areas
     addPortals() {
-        let traversableTileCount = this.map.getTraversableTileCount();
+        let traversableTileCount = this.map.getFloorlikeTileCount();
 
         const result = this.map.getAllTraversableTilesConnectedTo(/** TODO PlayerPos */);
 
@@ -322,29 +324,24 @@ class DungeonGenerator {
         //   | || | | | | | | | | |
         //   | || |_| | |_| | |_| |
         //   |_| \___/|____/ \___/
-        //-------------------------------------
-        // Connect isolated rooms via portals
-        //-------------------------------------
+        //----------------------------------------------
+        // Connect isolated rooms via a chain of portals
+        //----------------------------------------------
         //
         //      LET Area0 = getAllTilesConnectedTo(playerStartTile)
         //      LET Areas = Array containing one item so far: Area0
         //      FOR EACH tile in this.map
-        //          IF tile not painted
+        //          IF tile NOT in any Area
         //              LET newArea = getAllTilesConnectedTo(tile)
         //              PUSH newArea ONTO Areas
         //
-        //      FOR EACH area IN Areas
-        //          LET index = IndexOf(Areas, area)
+        //      FOR EACH (index, area) IN Areas
         //          LET next = index + 1 mod LENGTH(Areas)
-        //          entryPos = findValidPortalEntryPositionInArea(area)
-        //          exitPos = findValidPortalExitPositionInArea(area)
+        //          entryPos = findValidPortalEntryPositionInArea(area) // entry is a pure wall tile that is exactly one adjacent floor tile - and that floor tile must be pure
+        //          exitPos = findValidPortalExitPositionInArea(area) // must be a valid pure floor tile with one or more adjacent floor tiles, at least on of which are pure
         //
-        //          this.map[entryPos.y, entryPos.x] = new PortalEntryTile(index)
-        //          this.map[exitPos.y, exitPos.x] = new PortalExitTile(next)
-        //
-        //
-        //
-        // Start pointing it (another color)
+        //          this.map[entryPos.y, entryPos.x] = new PortalEntryTile(index) // Create a portal in the current area
+        //          this.map[exitPos.y, exitPos.x] = new PortalExitTile(next) // let the exit to the portal reside in the next area
         //
 
         console.warn(
@@ -360,40 +357,43 @@ class DungeonGenerator {
         const floorTiles = [];
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
-                if (this.map.get(x, y) instanceof FloorTile) {
+                if (this.map.get(x, y).isFloor()) {
                     floorTiles.push({ x, y });
                 }
             }
         }
 
-        if (floorTiles.length === 0) return;
-
-        // Add loot
-        const lootCount = Math.min(3, Math.floor(this.rooms.length / 2));
-        for (let i = 0; i < lootCount; i++) {
-            const pos = floorTiles[this.random(0, floorTiles.length - 1)];
-            if (this.map.tiles[pos.y][pos.x] instanceof FloorTile) {
-                this.map.tiles[pos.y][pos.x] = new LootTile(undefined, undefined);
-            }
+        if (floorTiles.length === 0) {
+            return;
         }
 
+        // Add loot
+        // const lootCount = Math.min(3, Math.floor(this.rooms.length / 2));
+        // for (let i = 0; i < lootCount; i++) {
+        //     const pos = floorTiles[this.random(0, floorTiles.length - 1)];
+        //     if (this.map.tiles[pos.y][pos.x].isFloor()) {
+        //         this.map.tiles[pos.y][pos.x] = new LootTile(undefined, undefined);
+        //     }
+        // }
+
         // Add monsters
-        const monsterCount = Math.min(5, this.rooms.length);
-        for (let i = 0; i < monsterCount; i++) {
+        const encouterCount = Math.min(5, this.rooms.length);
+        for (let i = 0; i < encouterCount; i++) {
             const pos = floorTiles[this.random(0, floorTiles.length - 1)];
-            if (this.map.tiles[pos.y][pos.x] instanceof FloorTile) {
-                this.map.tiles[pos.y][pos.x] = new EncounterTile(pos.x, pos.y, undefined, undefined);
+            if (this.map.tiles[pos.y][pos.x].isFloor()) {
+                this.map.tiles[pos.y][pos.x] = Tile.createEncounterStartPoint();
+                // TODO: Add encounter to the dungeon's "roaming entities" array.
             }
         }
 
         // Add traps
-        const trapCount = Math.floor(floorTiles.length / 30);
-        for (let i = 0; i < trapCount; i++) {
-            const pos = floorTiles[this.random(0, floorTiles.length - 1)];
-            if (this.map.tiles[pos.y][pos.x] instanceof FloorTile) {
-                this.map.tiles[pos.y][pos.x] = new TrapTile();
-            }
-        }
+        // const trapCount = Math.floor(floorTiles.length / 30);
+        // for (let i = 0; i < trapCount; i++) {
+        //     const pos = floorTiles[this.random(0, floorTiles.length - 1)];
+        //     if (this.map.tiles[pos.y][pos.x].isFloor()) {
+        //         this.map.tiles[pos.y][pos.x] = new TrapTile();
+        //     }
+        // }
     }
 
     random(min, max) {

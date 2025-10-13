@@ -176,16 +176,16 @@ export class FirstPersonRenderer {
             }
 
             if (tile.looksLikeWall) {
-                if (!this.map.looksLikeWall(x, y + 1)) {
+                if (!this.map.behavesLikeWall(x, y + 1)) {
                     wallPlanes.push([x, y + 0.5, Math.PI * 0.0]);
                 }
-                if (!this.map.looksLikeWall(x + 1, y)) {
+                if (!this.map.behavesLikeWall(x + 1, y)) {
                     wallPlanes.push([x + 0.5, y, Math.PI * 0.5]);
                 }
-                if (!this.map.looksLikeWall(x, y - 1)) {
+                if (!this.map.behavesLikeWall(x, y - 1)) {
                     wallPlanes.push([x, y - 0.5, Math.PI * 1.0]);
                 }
-                if (!this.map.looksLikeWall(x - 1, y)) {
+                if (!this.map.behavesLikeWall(x - 1, y)) {
                     wallPlanes.push([x - 0.5, y, Math.PI * 1.5]);
                 }
                 return;
