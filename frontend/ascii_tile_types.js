@@ -1,7 +1,7 @@
 import { mustBe, mustBeString } from "../utils/mustbe.js";
 import shallowCopy from "../utils/shallowCopy.js";
 import { TileOptions } from "../utils/tileOptionsParser.js";
-import { Orientation, Vector2i } from "./ascii_types.js";
+import { Orientation } from "./ascii_types.js";
 
 /** @typedef {string} TileTypeId - a string with a length of 1 */
 
@@ -145,7 +145,7 @@ export class Tile {
                         "REQUIRED_ symbol encountered in Tile constructor. ",
                         "REQUIRED_ is a placeholder, and cannot be used as a value directly",
                     ].join("\n"),
-                    { key, val, options: properties },
+                    { key, val, properties },
                 );
                 throw new Error("Incomplete data in constructor. Args may not contain a data placeholder");
             }
@@ -198,7 +198,6 @@ export class Tile {
 
         //
         // Normalize Orientation.
-        //
         if (this.orientation !== undefined && typeof this.orientation === "string") {
             const valueMap = {
                 north: Orientation.NORTH,
@@ -210,7 +209,7 @@ export class Tile {
         }
 
         //
-        // Tiles are not necessarily required to have an ID, but if they have one, it must be string or number
+        // Tiles are not required to have IDs, but IDs must be numbers or strings
         if (this.id !== undefined) {
             mustBe(this.id, "number", "string");
         }
@@ -234,8 +233,8 @@ export class Tile {
     }
 
     /** @returns {Tile} */
-    static createEncounterStartPoint() {
-        return this.fromChar(TileChars.ENCOUNTER_START_POINT);
+    static createEncounterStartPoint(encounterId) {
+        return this.fromChar(TileChars.ENCOUNTER_START_POINT, { encounterId });
     }
 
     /** @returns {Tile} */
@@ -270,7 +269,7 @@ export class Tile {
         // Normalize options into a TileOptions object,
         //
         if (!(options instanceof TileOptions)) {
-            options = TileOptions.fromObject(options);
+            options = TileOptions.fromObject(typeId, options);
         }
 
         let optionPos = 0;
@@ -278,7 +277,7 @@ export class Tile {
         const getOption = (name) => options.getValue(name, optionPos++);
         for (let [key, val] of Object.entries(typeInfo)) {
             //
-            const fetchFromOption = typeof val === "symbol" && val.descript.startsWith("REQUIRED_");
+            const fetchFromOption = typeof val === "symbol" && val.description.startsWith("REQUIRED_");
 
             creationArgs[key] = fetchFromOption ? getOption(key) : shallowCopy(val);
         }
@@ -287,7 +286,7 @@ export class Tile {
     }
 
     clone() {
-        return new this.constructor(this);
+        return new Tile(this.typeId, this);
     }
 
     isWallLike() {
@@ -303,6 +302,10 @@ export class Tile {
     }
 
     isFloorlike() {
+        if (this.typeId === TileChars.FLOOR) {
+            return true;
+        }
+
         if (this.is === TileChars.FLOOR) {
             return true;
         }
@@ -317,8 +320,4 @@ export class Tile {
     isFloor() {
         return this.typeId === TileChars.FLOOR;
     }
-}
-
-if (Math.PI < 0 && TileOptions && Orientation && Vector2i) {
-    ("STFU Linda");
 }

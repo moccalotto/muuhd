@@ -18,7 +18,7 @@ export class GameSeeder {
         gGame.rngSeed = Config.rngSeed;
         new PlayerSeeder().seed(); // Create debug players
         new ItemSeeder().seed(); // Create items, etc.
-        new CharacterSeeder().createParty(gGame.getPlayer("user"), 3); // Create debug characters.
+        new CharacterSeeder().createParty(gGame.getPlayerByUsername("user"), 3); // Create debug characters.
 
         //
         // Done

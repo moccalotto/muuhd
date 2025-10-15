@@ -54,5 +54,5 @@ export function isUsernameSane(candidate) {
 export function isPasswordSane(candidate) {
     // We know the password must adhere to one of our client-side-hashed crypto schemes,
     // so we can be fairly strict with the allowed passwords
-    return Config.passwordSanityRegex.test(candidate);
+    return Config.passwordHashSanityRegex.test(candidate);
 }

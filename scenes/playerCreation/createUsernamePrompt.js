@@ -44,7 +44,7 @@ export class CreateUsernamePrompt extends Prompt {
 
         //
         // try and fetch the player object from the game
-        const player = gGame.getPlayer(username);
+        const player = gGame.getPlayerByUsername(username);
 
         //
         // handle invalid username

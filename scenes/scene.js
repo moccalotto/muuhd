@@ -1,6 +1,8 @@
 import { sprintf } from "sprintf-js";
-import { Session } from "../models/session.js";
-import { Prompt } from "./prompt.js";
+
+/** @typedef {import("../utils/messages.js").WebsocketMessage} WebsocketMessage */
+/** @typedef {import("../models/session.js").Session} Session */
+/** @typedef {import("./prompt.js").Prompt } Prompt */
 
 /**
  * Scene - a class for showing one or more prompts in a row.
@@ -19,7 +21,7 @@ export class Scene {
      */
     introText = "";
 
-    /** @readonly @constant @type {Session} */
+    /** @readonly @constant @protected @type {Session} */
     _session;
     get session() {
         return this._session;
@@ -32,9 +34,9 @@ export class Scene {
      * @readonly
      * @type {Prompt}
      */
-    _prompt;
-    get prompt() {
-        return this._prompt;
+    _currentPrompt;
+    get currentPrompt() {
+        return this._currentPrompt;
     }
 
     constructor() {}
@@ -57,7 +59,7 @@ export class Scene {
      * @param {Prompt} prompt
      */
     showPrompt(prompt) {
-        this._prompt = prompt;
+        this._currentPrompt = prompt;
         prompt.execute();
     }
 
@@ -67,13 +69,62 @@ export class Scene {
     }
 
     /**
+     * The user has been prompted, and has replied.
+     *
+     * We route that message to the current prompt.
+     *
+     * It should not be necessary to override this function
+     *
+     * @param {WebsocketMessage} message
+     */
+    onReply(message) {
+        console.log("REPLY", {
+            message,
+            type: typeof message,
+        });
+        this.currentPrompt.onReply(message.text);
+    }
+
+    /**
+     * The user has declared their intention to quit.
+     *
+     * We route that message to the current prompt.
+     *
+     * It should may be necessary to override this method
+     * in case you want to trigger specific behavior before
+     * quitting.
+     *
+     * Default behavior is to route this message to the current prompt.
+     */
+    onQuit() {
+        this.currentPrompt.onQuit();
+    }
+
+    /**
+     * The user has typed :help [topic]
+     *
+     * We route that message to the current prompt.
+     *
+     * It should not be necessary to override this function
+     * unless you want some special prompt-agnostic event
+     * to be triggered - however, scenes should not have too
+     * many prompts, so handling this behavior inside the prompt
+     * should be the primary choice.
+     *
+     * @param {WebsocketMessage} message
+     */
+    onHelp(message) {
+        this.currentPrompt.onHelp(message.text);
+    }
+
+    /**
      * Triggered when a user types a :command that begins with a colon
      * and the current Prompt cannot handle that command.
      *
      * @param {string} command
      * @param {any[]} args
      */
-    onColon(command, args) {
+    onColonFallback(command, args) {
         const propertyName = "onColon__" + command;
         const property = this[propertyName];
 
@@ -85,14 +136,14 @@ export class Scene {
         }
 
         //
-        // If the prompt has a method called onColon_foo() =>
+        // If this scene has a method called onColon_foo() =>
         if (typeof property === "function") {
             property.call(this, args);
             return;
         }
 
         //
-        // If the prompt has a _string_ called onColon_foo =>
+        // If this scene has a string property called onColon_foo =>
         if (typeof property === "string") {
             this.session.sendText(property);
             return;
@@ -108,9 +159,28 @@ export class Scene {
         );
     }
 
+    /**
+     * The user has typed :help [topic]
+     *
+     * We route that message to the current prompt.
+     *
+     * There is no need to override this method.
+     *
+     * onColonFallback will be called if the current prompt
+     * cannot handle the :colon command.
+     *
+     * @param {WebsocketMessage} message
+     */
+    onColon(message) {
+        const handledByPrompt = this.currentPrompt.onColon(message.command, message.args);
+
+        if (!handledByPrompt) {
+            this.onColonFallback(message.command, message.args);
+        }
+    }
+
     //
-    // Easter ægg
-    // Example dynamic colon handler
+    // Example dynamic colon handler (also easter egg)
     /** @param {any[]} args */
     onColon__imperial(args) {
         if (args.length === 0) {
@@ -124,9 +194,5 @@ export class Scene {
         );
     }
 
-    onColon__hi = "Hoe";
-}
-
-if (Math.PI < 0 && Session && Prompt) {
-    ("STFU Linda");
+    onColon__hi = "Ho!";
 }

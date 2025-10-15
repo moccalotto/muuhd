@@ -30,11 +30,11 @@ export class UsernamePrompt extends Prompt {
 
     //
     // User replied to our prompt
-    onReply(text) {
+    onReply(username) {
         //
         // do basic syntax checks on usernames
-        if (!security.isUsernameSane(text)) {
-            console.info("Someone entered insane username: '%s'", text);
+        if (!security.isUsernameSane(username)) {
+            console.info("Someone entered insane username: '%s'", username);
             this.sendError("Incorrect username, try again");
             this.execute();
             return;
@@ -42,12 +42,12 @@ export class UsernamePrompt extends Prompt {
 
         //
         // try and fetch the player object from the game
-        const player = gGame.getPlayer(text);
+        const player = gGame.getPlayerByUsername(username);
 
         //
         // handle invalid username
         if (!player) {
-            console.info("Someone entered incorrect username: '%s'", text);
+            console.info("Someone entered incorrect username: '%s'", username);
             this.sendError("Incorrect username, try again");
             this.execute();
             return;

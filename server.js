@@ -174,15 +174,15 @@ class MudServer {
         const msgObj = new WebsocketMessage(data.toString());
 
         //
-        // Handle replies to prompts. The main workhorse of the game.
+        // Route reply-messages to the current scene
         if (msgObj.isReply()) {
-            return session.scene.prompt.onReply(msgObj.text);
+            return session.scene.onReply(msgObj);
         }
 
         //
         // Handle :help commands
         if (msgObj.isHelp()) {
-            return session.scene.prompt.onHelp(msgObj.text);
+            return session.scene.onHelp(msgObj);
         }
 
         //
@@ -196,7 +196,7 @@ class MudServer {
         //
         // Handle any text that starts with ":"  that isn't :help or :quit
         if (msgObj.isColon()) {
-            return session.scene.prompt.onColon(msgObj.command, msgObj.args);
+            return session.scene.onColon(msgObj);
         }
 
         //

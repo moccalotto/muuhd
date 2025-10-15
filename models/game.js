@@ -56,7 +56,8 @@ export class Game {
         this._random = new Xorshift32(rngSeed);
     }
 
-    getPlayer(username) {
+    getPlayerByUsername(username) {
+        console.log("GETTING PLAYER: `%s`", username);
         return this._players.get(username);
     }
 

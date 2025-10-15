@@ -1,5 +1,5 @@
 import { CharType, TileMap } from "./ascii_tile_map";
-import { Tile } from "./ascii_tile_types";
+import { Tile, TileChars } from "./ascii_tile_types";
 import { Orientation } from "./ascii_types";
 
 class DungeonGenerator {
@@ -312,7 +312,16 @@ class DungeonGenerator {
     addPortals() {
         let traversableTileCount = this.map.getFloorlikeTileCount();
 
-        const result = this.map.getAllTraversableTilesConnectedTo(/** TODO PlayerPos */);
+        //
+        // Find the player's start point, and let this be the
+        // bases of area 0
+        const [x, y] = this.map.forEach((tile, x, y) => {
+            if (tile.typeId === TileChars.PLAYER_START_POINT) {
+                return [x, y];
+            }
+        });
+
+        const result = this.map.getAllTraversableTilesConnectedTo(x, y);
 
         if (result.size === traversableTileCount) {
             // There are no isolated areas, return
@@ -381,7 +390,7 @@ class DungeonGenerator {
         for (let i = 0; i < encouterCount; i++) {
             const pos = floorTiles[this.random(0, floorTiles.length - 1)];
             if (this.map.tiles[pos.y][pos.x].isFloor()) {
-                this.map.tiles[pos.y][pos.x] = Tile.createEncounterStartPoint();
+                this.map.tiles[pos.y][pos.x] = Tile.createEncounterStartPoint("PLACEHOLDER_ENCOUNTER_ID");
                 // TODO: Add encounter to the dungeon's "roaming entities" array.
             }
         }
@@ -401,7 +410,8 @@ class DungeonGenerator {
     }
 }
 
-let currentDungeon = "";
+/** @type {string} */
+window.currentDungeon = "";
 
 window.generateDungeon = () => {
     const width = parseInt(document.getElementById("width").value);
@@ -409,9 +419,9 @@ window.generateDungeon = () => {
     const roomCount = parseInt(document.getElementById("roomCount").value);
 
     const generator = new DungeonGenerator(width, height, roomCount);
-    currentDungeon = generator.generate();
+    window.currentDungeon = generator.generate();
 
-    document.getElementById("dungeonDisplay").textContent = currentDungeon;
+    document.getElementById("dungeonDisplay").textContent = window.currentDungeon;
 };
 
 window.downloadDungeon = () => {

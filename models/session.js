@@ -10,33 +10,25 @@ export class Session {
     _websocket;
 
     /** @protected @type {Scene} */
-    _scene;
+    _currentScene;
 
-    /** @readonly @constant @type {Scene} */
+    /** @readonly @type {Scene} */
     get scene() {
-        return this._scene;
+        return this._currentScene;
     }
 
-    /** @type {Player} */
+    /** @constant @type {Player} */
     _player;
 
+    /**
+     * The player that owns this session.
+     * This value is undefined until the player has logged in,
+     * and after that it is _constant_
+     *
+     * @constant @type {Player}
+     */
     get player() {
         return this._player;
-    }
-
-    /** @param {Player} player */
-    set player(player) {
-        if (player instanceof Player) {
-            this._player = player;
-            return;
-        }
-
-        if (player === null) {
-            this._player = null;
-            return;
-        }
-
-        throw Error(`Can only set player to null or instance of Player, but received ${typeof player}`);
     }
 
     /**
@@ -54,8 +46,28 @@ export class Session {
         if (!(scene instanceof Scene)) {
             throw new Error(`Expected instance of Scene, got a ${typeof scene}: >>${scene}<<`);
         }
-        this._scene = scene;
+        this._currentScene = scene;
         scene.execute(this);
+    }
+
+    /**
+     * May only be called when the current player property has not yet been populated.
+     * May only called once.
+     *
+     * @param {Player} player
+     */
+    setPlayer(player) {
+        if (player instanceof Player) {
+            this._player = player;
+            return;
+        }
+
+        if (player === null) {
+            this._player = null;
+            return;
+        }
+
+        throw Error(`Can only set player to null or instance of Player, but received ${typeof player}`);
     }
 
     /** Close the session and websocket */
@@ -65,7 +77,7 @@ export class Session {
             this._websocket = null;
         }
         this._player = null;
-        this._scene = null;
+        this._currentScene = null;
     }
 
     /**

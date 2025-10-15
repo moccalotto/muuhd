@@ -1,8 +1,7 @@
-import { Scene } from "./scene.js";
-
 /** @typedef {import("../models/session.js").Session} Session */
 /** @typedef {import("../utils/message.js").MessageType} MessageType */
 /** @typedef {import("../utils/message.js").WebsocketMessage} WebsocketMessage */
+/** @typedef {import("./scene.js").Scene} Scene */
 
 /**
  * @typedef {object} PromptMethods
@@ -66,9 +65,6 @@ export class Prompt {
 
     /** @param {Scene} scene */
     constructor(scene) {
-        if (!(scene instanceof Scene)) {
-            throw new Error("Expected an instance of >>Scene<< but got " + typeof scene);
-        }
         this._scene = scene;
 
         //
@@ -103,6 +99,8 @@ export class Prompt {
      *
      * @param {string} command
      * @param {any[]} args
+     *
+     * @returns {boolean} true if the command was handled in the prompt.
      */
 
     onColon(command, args) {
@@ -113,21 +111,21 @@ export class Prompt {
         // Default: we have no handler for the Foo command,
         // So let's see if daddy can handle it.
         if (property === undefined) {
-            return this.scene.onColon(command, args);
+            return false;
         }
 
         //
         // If the prompt has a method called onColon_foo() =>
         if (typeof property === "function") {
             property.call(this, args);
-            return;
+            return true;
         }
 
         //
         // If the prompt has a _string_ called onColon_foo =>
         if (typeof property === "string") {
             this.sendText(property);
-            return;
+            return true;
         }
 
         //

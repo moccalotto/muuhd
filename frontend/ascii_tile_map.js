@@ -149,14 +149,19 @@ export class TileMap {
     }
 
     behavesLikeFloor(x, y) {
+        console.log("behavesLikeFloor???", { x, y });
         x |= 0;
         y |= 0;
 
         if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+            console.log("   behavesLikeFloor: YES");
             return true;
         }
 
-        return this.tiles[y][x].isFloorlike();
+        const result = this.tiles[y][x].isFloorlike();
+        console.log(result ? "    YES" : "    NOPE");
+
+        return result;
     }
 
     /**

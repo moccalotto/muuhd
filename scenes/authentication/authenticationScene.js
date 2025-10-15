@@ -29,10 +29,9 @@ export class AuthenticationScene extends Scene {
 
     passwordAccepted() {
         this.player.loggedIn = true;
-        this.session.player = this.player;
 
+        this.session.setPlayer(this.player);
         this.session.sendText(["= Success!", "((but I don't know what to do now...))"]);
-
         this.session.setScene(new GameScene());
     }
 
