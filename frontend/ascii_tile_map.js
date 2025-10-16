@@ -25,7 +25,7 @@ import { Vector2i } from "./ascii_types.js";
  * @readonly @constant @enum {string}
  */
 export const CharType = {
-    SYSTEM: "internalMapChar",
+    SYSTEM: "typeId",
     MINIMAP: "minimapChar",
     MINIMAP_REVEALED: "revealedMinimapChar",
 };
@@ -100,10 +100,11 @@ export class TileMap {
      */
     toString(charType = CharType.SYSTEM) {
         let result = "";
+
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
                 const tile = this.tiles[y][x];
-                result += tile[charType];
+                result += tile[charType] ?? "Ø";
             }
             result += "\n";
         }
@@ -148,20 +149,20 @@ export class TileMap {
         return this.tiles[y][x].isWallLike();
     }
 
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @returns {boolean}
+     */
     behavesLikeFloor(x, y) {
-        console.log("behavesLikeFloor???", { x, y });
         x |= 0;
         y |= 0;
 
         if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
-            console.log("   behavesLikeFloor: YES");
             return true;
         }
 
-        const result = this.tiles[y][x].isFloorlike();
-        console.log(result ? "    YES" : "    NOPE");
-
-        return result;
+        return this.tiles[y][x].isFloorlike();
     }
 
     /**

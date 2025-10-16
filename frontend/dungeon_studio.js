@@ -29,7 +29,7 @@ class DungeonGenerator {
         this.addPillarsToBigRooms();
         this.addFeatures();
         this.addPlayerStart();
-        this.addPortals();
+        // this.addPortals();
         return this.map.toString(CharType.MINIMAP_REVEALED);
     }
 
@@ -425,11 +425,11 @@ window.generateDungeon = () => {
 };
 
 window.downloadDungeon = () => {
-    if (!currentDungeon) {
+    if (!window.currentDungeon) {
         window.generateDungeon();
     }
 
-    const blob = new Blob([currentDungeon], { type: "text/plain" });
+    const blob = new Blob([window.currentDungeon], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
