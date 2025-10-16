@@ -156,6 +156,8 @@ export class Tile {
             if (!Object.hasOwn(this, key) /* Object.prototype.hasOwnProperty.call(this, key) */) {
                 console.warn("Unknown tile property", { key, val, properties });
             }
+
+            this[key] = val;
         }
 
         //
