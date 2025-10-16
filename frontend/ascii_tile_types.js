@@ -171,9 +171,7 @@ export class Tile {
 
             const other = shallowCopy(TileTypes[this.disguiseAs]);
             for (const [pKey, pVal] of Object.entries(other)) {
-                if (this.key !== undefined) {
-                    this[pKey] = pVal;
-                }
+                this[pKey] ??= pVal;
             }
         }
 
@@ -193,9 +191,7 @@ export class Tile {
             //
             const other = shallowCopy(TileTypes[this.is]);
             for (const [pKey, pVal] of Object.entries(other)) {
-                if (this.key !== undefined) {
-                    this[pKey] = pVal;
-                }
+                this[pKey] ??= pVal;
             }
         }
 
@@ -229,8 +225,14 @@ export class Tile {
             mustBe(this.portalTargetId, "number", "string");
         }
 
-        this.minimapChar ??= this.typeId;
-        this.revealedMinimapChar ??= this.minimapChar;
+        if (this.minimapChar === undefined) {
+            console.debug("minimap = typeid", { ...this });
+            this.minimapChar = this.typeId;
+        }
+        if (this.revealedMinimapChar === undefined) {
+            console.debug("reveaked = minimap", { ...this });
+            this.revealedMinimapChar = this.minimapChar;
+        }
     }
 
     /** @returns {Tile} */
@@ -279,20 +281,21 @@ export class Tile {
         }
 
         let optionPos = 0;
-        const creationArgs = {};
+        const properties = {};
         const getOption = (name) => options.getValue(name, optionPos++);
         for (let [key, val] of Object.entries(prototype)) {
+            properties[key] = val;
             //
-            const fetchFromOption = typeof val === "symbol" && val.description.startsWith("REQUIRED_");
+            const fetchOption = typeof val === "symbol" && val.description.startsWith("REQUIRED_");
 
-            creationArgs[key] = fetchFromOption ? getOption(key) : shallowCopy(val);
+            properties[key] = fetchOption ? getOption(key) : shallowCopy(val);
         }
 
-        return new Tile(typeId, creationArgs);
+        return new Tile(typeId, properties);
     }
 
     clone() {
-        return new Tile(this.typeId, this);
+        return new Tile(this.typeId, { ...this });
     }
 
     isWallLike() {

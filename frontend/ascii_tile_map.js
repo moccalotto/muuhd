@@ -106,7 +106,6 @@ export class TileMap {
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
                 const tile = this.tiles[y][x];
-                console.log(tile);
                 errorCount += tile[charType] === undefined;
                 result += tile[charType] ?? undefinedCharPlaceholder;
             }
