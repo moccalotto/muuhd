@@ -24,19 +24,18 @@ export const TileChars = Object.freeze({
 
 const REQUIRED_ID = Symbol("REQUIRED_ID");
 const REQUIRED_ORIENTATION = Symbol("REQUIRED_ORIENTATION");
-const REQUIRED_OCCUPANTS = Symbol("REQUIRED_OCCUPANTS");
 
 /** @type {Record<TileTypeId,Tile>} */
 export const TileTypes = {
     [TileChars.FLOOR]: {
         minimapChar: "·",
-        traversable: true,
+        isTraversable: true,
     },
     [TileChars.WALL]: {
         minimapChar: "█",
         minimapColor: "#aaa",
         textureId: "wall",
-        traversable: false,
+        isTraversable: false,
         looksLikeWall: true,
     },
     [TileChars.SECRET_PORTAL]: {
@@ -58,7 +57,6 @@ export const TileTypes = {
         is: TileChars.FLOOR, // this is actually just a floor tile that is occupied by an encounter when the map is loaded
         encounterId: REQUIRED_ID,
         textureId: REQUIRED_ID,
-        occupants: REQUIRED_OCCUPANTS,
     },
     [TileChars.PLAYER_START_POINT]: {
         is: TileChars.FLOOR,
@@ -100,7 +98,7 @@ export class Tile {
     textureId;
 
     /** @type {number|string} type of encounter located on this tile. May or may not be unique*/
-    encounterType;
+    encounterId;
 
     /** @type {number|string} type of trap located on this tile. May or may not be unique*/
     trapType;
@@ -139,6 +137,11 @@ export class Tile {
         // Copy props from properties.
         //
         for (const [key, val] of Object.entries(properties)) {
+            //
+            // Ensure that we do not have placeholder symbols in the incoming properties
+            // Placeolder symbols indicate that the data must be supplied externally by
+            // the creator of the tile
+            //
             if (typeof val === "symbol" && val.description.startsWith("REQUIRED_")) {
                 console.error(
                     [
@@ -225,6 +228,9 @@ export class Tile {
         if (this.portalTargetId !== undefined) {
             mustBe(this.portalTargetId, "number", "string");
         }
+
+        this.minimapChar ??= this.typeId;
+        this.revealedMinimapChar ??= this.minimapChar;
     }
 
     /** @returns {Tile} */
@@ -254,9 +260,9 @@ export class Tile {
      * @returns {Tile}
      */
     static fromChar(typeId, options) {
-        const typeInfo = TileTypes[typeId];
+        const prototype = TileTypes[typeId];
 
-        if (!typeInfo) {
+        if (!prototype) {
             console.log("unknown type id", { typeId });
             throw new Error(`Unknown typeId >>>${typeId}<<<`);
         }
@@ -275,7 +281,7 @@ export class Tile {
         let optionPos = 0;
         const creationArgs = {};
         const getOption = (name) => options.getValue(name, optionPos++);
-        for (let [key, val] of Object.entries(typeInfo)) {
+        for (let [key, val] of Object.entries(prototype)) {
             //
             const fetchFromOption = typeof val === "symbol" && val.description.startsWith("REQUIRED_");
 

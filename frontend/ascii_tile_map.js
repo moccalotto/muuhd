@@ -25,7 +25,7 @@ import { Vector2i } from "./ascii_types.js";
  * @readonly @constant @enum {string}
  */
 export const CharType = {
-    SYSTEM: "typeId",
+    TYPE_ID: "typeId",
     MINIMAP: "minimapChar",
     MINIMAP_REVEALED: "revealedMinimapChar",
 };
@@ -98,15 +98,23 @@ export class TileMap {
      * @param {CharType} charType
      * @returns {string}
      */
-    toString(charType = CharType.SYSTEM) {
+    toString(charType = CharType.TYPE_ID) {
+        const undefinedCharPlaceholder = "?";
         let result = "";
+        let errorCount = 0;
 
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
                 const tile = this.tiles[y][x];
-                result += tile[charType] ?? "Ø";
+                console.log(tile);
+                errorCount += tile[charType] === undefined;
+                result += tile[charType] ?? undefinedCharPlaceholder;
             }
             result += "\n";
+        }
+
+        if (errorCount > 0) {
+            console.warn("Could not convert map to string", { errorCount });
         }
 
         return result;
