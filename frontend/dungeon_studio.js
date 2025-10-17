@@ -29,8 +29,8 @@ class DungeonGenerator {
         this.addPillarsToBigRooms();
         this.addFeatures();
         this.addPlayerStart();
-        // this.addPortals();
-        return this.map.toString(CharType.MINIMAP_REVEALED);
+        this.addPortals();
+        return this.map.toString(CharType.TYPE_ID);
     }
 
     generateRooms() {

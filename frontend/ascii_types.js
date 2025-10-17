@@ -16,7 +16,7 @@ export class Orientation {
 
     /**
      * @param {string} str
-     * @returns {Orientation}
+     * @returns {Orientation|undefined}
      */
     static fromString(str) {
         if (typeof str !== "string") {
@@ -35,14 +35,16 @@ export class Orientation {
 
     /**
      * @param {string|number} val
-     * @returns {Orientation}
+     * @returns {Orientation|undefined}
      */
     static normalize(val) {
         if (typeof val === "string") {
             return Orientation.fromString(val);
         }
 
-        return val % 4;
+        if ((val | 0) === val) {
+            return (val | 0) % 4;
+        }
     }
 }
 

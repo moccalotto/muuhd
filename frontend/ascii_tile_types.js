@@ -1,4 +1,4 @@
-import { mustBe, mustBeString } from "../utils/mustbe.js";
+import { mustBe } from "../utils/mustbe.js";
 import shallowCopy from "../utils/shallowCopy.js";
 import { TileOptions } from "../utils/tileOptionsParser.js";
 import { Orientation } from "./ascii_types.js";
@@ -22,8 +22,63 @@ export const TileChars = Object.freeze({
     PLAYER_START_POINT: "P",
 });
 
+/**
+ * Properties whose value matches one of these constants
+ * must have their actual value supplied by the creator
+ * of the Tile object.
+ *
+ * For instance, if a Tile has a textureId = PropertyPlaceholder.ID, then
+ * the creature of that Tile MUST supply the textureId before the tile can
+ * be used. Such values SHOULD be provided in the constructor, but CAN be
+ * provided later, as long as they are provided before the tile is used
+ * in the actual game.
+ *
+ */
+
+/** Properties with this value must be valid ID values. */
 const REQUIRED_ID = Symbol("REQUIRED_ID");
 const REQUIRED_ORIENTATION = Symbol("REQUIRED_ORIENTATION");
+
+function mustBeId(value) {
+    if ((value | 0) === value) {
+        return value;
+    }
+
+    if (typeof value !== "string") {
+        throw new Error("Value id not a valid id", { value });
+    }
+
+    value = value.trim();
+
+    if (value === "") {
+        throw new Error("Value id not a valid id", { value });
+    }
+
+    return value;
+}
+function mustBeOrientation(value) {
+    const result = Orientation.normalize(value);
+
+    if (result === undefined) {
+        throw new Error("Value is not a valid orientation", { value });
+    }
+
+    return result;
+}
+
+function mustBeSingleGrapheme(value) {
+    if (typeof value !== "string") {
+        throw new Error("Value is not a one-grapheme string", { value });
+    }
+
+    const seg = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
+    if ([...seg.segment(value)].length !== 1) {
+        throw new Error("Value is not a one-grapheme string", { value });
+    }
+
+    return value;
+}
 
 /** @type {Record<TileTypeId,Tile>} */
 export const TileTypes = {
@@ -138,26 +193,15 @@ export class Tile {
         //
         for (const [key, val] of Object.entries(properties)) {
             //
-            // Ensure that we do not have placeholder symbols in the incoming properties
-            // Placeolder symbols indicate that the data must be supplied externally by
-            // the creator of the tile
-            //
-            if (typeof val === "symbol" && val.description.startsWith("REQUIRED_")) {
-                console.error(
-                    [
-                        "REQUIRED_ symbol encountered in Tile constructor. ",
-                        "REQUIRED_ is a placeholder, and cannot be used as a value directly",
-                    ].join("\n"),
-                    { key, val, properties },
-                );
-                throw new Error("Incomplete data in constructor. Args may not contain a data placeholder");
+            // Skip empty properties.
+            if (val === undefined) {
+                continue;
             }
 
             if (!Object.hasOwn(this, key) /* Object.prototype.hasOwnProperty.call(this, key) */) {
                 console.warn("Unknown tile property", { key, val, properties });
+                continue;
             }
-
-            this[key] = val;
         }
 
         //
@@ -169,7 +213,7 @@ export class Tile {
         // bump event, spell, or other method for discovering secrets
         //
         if (this.disguiseAs !== undefined) {
-            this.revealed = false;
+            this.revealed ??= false;
 
             const other = shallowCopy(TileTypes[this.disguiseAs]);
             for (const [pKey, pVal] of Object.entries(other)) {
@@ -198,43 +242,22 @@ export class Tile {
         }
 
         //
-        // Normalize Orientation.
-        if (this.orientation !== undefined && typeof this.orientation === "string") {
-            const valueMap = {
-                north: Orientation.NORTH,
-                south: Orientation.SOUTH,
-                east: Orientation.EAST,
-                west: Orientation.WEST,
-            };
-            this.orientation = mustBeString(valueMap[this.orientation.toLowerCase()]);
-        }
+        // Populate derivable values that have not yet been set.
+        this.minimapChar ??= this.typeId;
+        this.revealedMinimapChar ??= this.minimapChar;
+        this.revealedMinimapColo ??= this.minimapColor;
 
         //
-        // Tiles are not required to have IDs, but IDs must be numbers or strings
-        if (this.id !== undefined) {
-            mustBe(this.id, "number", "string");
-        }
-
+        // Sanitize and normalize
         //
-        // If a tile has a texture, the texture id must be string or number
-        if (this.textureId !== undefined) {
-            mustBe(this.textureId, "number", "string");
-        }
+        this.id ??= mustBeId(this.id);
+        this.textureId ??= mustBeId(this.textureId);
+        this.portalTargetId ??= mustBeId(this.portalTargetId);
+        this.orientation ??= mustBeOrientation(this.orientation);
 
-        //
-        // If a tile is a portal with a portal target, that target id must be a number or string.
-        if (this.portalTargetId !== undefined) {
-            mustBe(this.portalTargetId, "number", "string");
-        }
-
-        if (this.minimapChar === undefined) {
-            console.debug("minimap = typeid", { ...this });
-            this.minimapChar = this.typeId;
-        }
-        if (this.revealedMinimapChar === undefined) {
-            console.debug("reveaked = minimap", { ...this });
-            this.revealedMinimapChar = this.minimapChar;
-        }
+        mustBeSingleGrapheme(this.typeId);
+        mustBeSingleGrapheme(this.minimapChar);
+        mustBeSingleGrapheme(this.revealedMinimapChar);
     }
 
     /** @returns {Tile} */
