@@ -115,20 +115,17 @@ class DungeonGenerator {
             let lastNonWallX = undefined; // x-index of the LAST (eastmost) non-wall tile that we encountered on this row
 
             for (let x = 0; x < this.width; x++) {
-                const isWall = this.map.get(x, y).looksLikeWall;
-
-                if (isWall) {
+                //
+                if (this.map.get(x, y).isWall()) {
                     continue;
                 }
 
-                if (firstNonWallX === undefined) {
-                    firstNonWallX = x;
-                }
+                firstNonWallX ??= x;
                 lastNonWallX = x;
             }
 
-            const onlyWalls = lastNonWallX === undefined;
-            if (onlyWalls) {
+            // Did this row contain only walls?
+            if (firstNonWallX === undefined) {
                 continue;
             }
 
@@ -226,7 +223,7 @@ class DungeonGenerator {
                     continue;
                 }
 
-                if (this.map.behavesLikeFloor(x, y)) {
+                if (this.map.get(x, y).isFloor()) {
                     walkabilityCache.push([x, y]);
                 }
             }
@@ -244,7 +241,7 @@ class DungeonGenerator {
 
         for (let [x, y] of walkabilityCache) {
             //
-            const walkable = (offsetX, offsetY) => this.map.behavesLikeFloor(x + offsetX, y + offsetY);
+            const walkable = (offsetX, offsetY) => this.map.isFloorLike(x + offsetX, y + offsetY);
 
             const surroundingFloorCount =
                 0 +
@@ -281,7 +278,7 @@ class DungeonGenerator {
                     continue;
                 }
 
-                if (this.map.behavesLikeFloor(x, y)) {
+                if (this.map.isFloorLike(x, y)) {
                     walkabilityCache.push([x, y]);
                 }
             }
@@ -290,7 +287,7 @@ class DungeonGenerator {
         const idx = this.random(0, walkabilityCache.length - 1);
         const [x, y] = walkabilityCache[idx];
 
-        const walkable = (offsetX, offsetY) => this.map.behavesLikeFloor(x + offsetX, y + offsetY);
+        const walkable = (offsetX, offsetY) => this.map.isFloorLike(x + offsetX, y + offsetY);
 
         //
         // When spawning in, which direction should the player be oriented?

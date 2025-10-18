@@ -4,12 +4,14 @@ import { TileOptions } from "../utils/tileOptionsParser.js";
 import { Orientation } from "./ascii_types.js";
 
 /** @typedef {string} TileTypeId - a string with a length of 1 */
+/** @typedef {string} MinimapGrapheme - a string containing a single grapheme */
+/** @typedef {string|number} ResourceId - id of a resource (such as a texture or another tile) used by a tile */
 
 /**
  * Array of __internal__ characters used to identify tile types.
- * These are __not__ necessarily the characters used to display
+ * These are __not necessarily__ the characters used to display
  * the tile on the minimap - but they are used when serializing
- * the maps into a semi-human-readable text-format.
+ * the maps into a human-readable text-format.
  *
  * @enum {TileTypeId}
  */
@@ -27,36 +29,35 @@ export const TileChars = Object.freeze({
  * must have their actual value supplied by the creator
  * of the Tile object.
  *
- * For instance, if a Tile has a textureId = PropertyPlaceholder.ID, then
- * the creature of that Tile MUST supply the textureId before the tile can
- * be used. Such values SHOULD be provided in the constructor, but CAN be
- * provided later, as long as they are provided before the tile is used
- * in the actual game.
- *
+ * For instance, if a Tile has a textureId = REQUIRED_ID, then
+ * the creator of that Tile MUST supply the textureId before the tile can
+ * be used in the game Such values SHOULD be provided in the constructor,
+ * but CAN be provided later, as long as they are provided before the
+ * tile is used in the actual game.
  */
 
 /** Properties with this value must be valid ID values. */
 const REQUIRED_ID = Symbol("REQUIRED_ID");
 const REQUIRED_ORIENTATION = Symbol("REQUIRED_ORIENTATION");
 
-function mustBeId(value) {
+function sanitizeId(value) {
     if ((value | 0) === value) {
         return value;
     }
 
     if (typeof value !== "string") {
-        throw new Error("Value id not a valid id", { value });
+        throw new Error("Value is not a valid id", { value });
     }
 
     value = value.trim();
 
     if (value === "") {
-        throw new Error("Value id not a valid id", { value });
+        throw new Error("Value is not a valid id", { value });
     }
 
     return value;
 }
-function mustBeOrientation(value) {
+function sanitizeOrientation(value) {
     const result = Orientation.normalize(value);
 
     if (result === undefined) {
@@ -122,13 +123,13 @@ export const TileTypes = {
 };
 
 export class Tile {
-    /** @readonly {string?|number?} Unique (but optional) instance if of this tile */
+    /** @readonly {ResourceId?} Unique (but optional) instance id of this tile - only needed when this tile is referenced by other tiles */
     id;
 
     /** @type {TileTypeId} Char that defines this tile */
     typeId;
 
-    /** @type {TileTypeId} Icon char of tile */
+    /** @type {MinimapGrapheme} Icon char of tile */
     minimapChar;
 
     /** @type {string} Color of the icon of tile */
@@ -146,17 +147,14 @@ export class Tile {
     /** @type {boolean} Is this a portal exit and/or entry */
     isPortal;
 
-    /** @type {string|number} Where is the player transported if they enter the portal */
+    /** @type {ResourceId} id of the type where players will be transported - many portals may share same target */
     portalTargetId;
 
-    /** @type {number|string} id of texture to use */
+    /** @type {ResourceId} id of texture to use - does not need to be unique */
     textureId;
 
-    /** @type {number|string} type of encounter located on this tile. May or may not be unique*/
+    /** @type {ResourceId} id of encounter located on this tile. May or may not be unique */
     encounterId;
-
-    /** @type {number|string} type of trap located on this tile. May or may not be unique*/
-    trapType;
 
     /** @type {Orientation} */
     orientation;
@@ -170,14 +168,70 @@ export class Tile {
     /** @type {boolean} Has the secret properties of this tile been revealed? */
     revealed;
 
-    /** @type {TileTypeId} Icon char of tile after tile's secrets have been revealed */
+    /** @type {MinimapGrapheme} Icon char of tile after tile's secrets have been revealed */
     revealedMinimapChar;
 
     /** @type {string} Color of the icon char of tile after tile's secrets have been revealed */
     revealedMinimapColor;
 
-    /** @type {number|string} id of texture to use after the secrets of this tile has been revealed */
+    /** @type {ResourceId} id of texture to use after the secrets of this tile has been revealed */
     revealedTextureId;
+
+    /** @returns {Tile} */
+    static createWall() {
+        return this.fromChar(TileChars.WALL);
+    }
+
+    /** @returns {Tile} */
+    static createEncounterStartPoint(encounterId) {
+        return this.fromChar(TileChars.ENCOUNTER_START_POINT, { encounterId });
+    }
+
+    /** @returns {Tile} */
+    static createFloor() {
+        return this.fromChar(TileChars.FLOOR);
+    }
+
+    /** @returns {Tile} */
+    static createPlayerStart(orientation) {
+        return this.fromChar(TileChars.PLAYER_START_POINT, { orientation });
+    }
+
+    /**
+     * Given a map symbol,
+     * @param {TileTypeId} typeId
+     * @param {TileOptions|Record<string,any>} options
+     * @returns {Tile}
+     */
+    static fromChar(typeId, options) {
+        const prototype = TileTypes[typeId];
+
+        if (!prototype) {
+            console.log("unknown type id", { typeId });
+            throw new Error(`Unknown typeId >>>${typeId}<<<`);
+        }
+
+        //
+        // Normalize options into a TileOptions object,
+        //
+        if (!(options instanceof TileOptions)) {
+            options = TileOptions.fromObject(typeId, options ?? {});
+        }
+
+        let optionPos = 0;
+        const properties = {};
+
+        for (let [key, val] of Object.entries(prototype)) {
+            //
+            if (typeof val === "symbol" && val.description.startsWith("REQUIRED_")) {
+                properties[key] = options.getValue(name, optionPos++);
+            } else {
+                properties[key] = shallowCopy(val);
+            }
+        }
+
+        return new Tile(typeId, properties);
+    }
 
     /**
      * @param {TileTypeId} typeId
@@ -250,73 +304,22 @@ export class Tile {
         //
         // Sanitize and normalize
         //
-        this.id ??= mustBeId(this.id);
-        this.textureId ??= mustBeId(this.textureId);
-        this.portalTargetId ??= mustBeId(this.portalTargetId);
-        this.orientation ??= mustBeOrientation(this.orientation);
+        if (this.id !== undefined) {
+            this.id = sanitizeId(this.id);
+        }
+        if (this.textureId !== undefined) {
+            this.textureId = sanitizeId(this.textureId);
+        }
+        if (this.portalId !== undefined) {
+            this.portalTargetId = sanitizeId(this.portalTargetId);
+        }
+        if (this.orientation !== undefined) {
+            this.orientation = sanitizeOrientation(this.orientation);
+        }
 
         mustBeSingleGrapheme(this.typeId);
         mustBeSingleGrapheme(this.minimapChar);
         mustBeSingleGrapheme(this.revealedMinimapChar);
-    }
-
-    /** @returns {Tile} */
-    static createWall() {
-        return this.fromChar(TileChars.WALL);
-    }
-
-    /** @returns {Tile} */
-    static createEncounterStartPoint(encounterId) {
-        return this.fromChar(TileChars.ENCOUNTER_START_POINT, { encounterId });
-    }
-
-    /** @returns {Tile} */
-    static createFloor() {
-        return this.fromChar(TileChars.FLOOR);
-    }
-
-    /** @returns {Tile} */
-    static createPlayerStart(orientation) {
-        return this.fromChar(TileChars.PLAYER_START_POINT, { orientation });
-    }
-
-    /**
-     * Given a map symbol,
-     * @param {TileTypeId} typeId
-     * @param {TileOptions|Record<string,string>} options
-     * @returns {Tile}
-     */
-    static fromChar(typeId, options) {
-        const prototype = TileTypes[typeId];
-
-        if (!prototype) {
-            console.log("unknown type id", { typeId });
-            throw new Error(`Unknown typeId >>>${typeId}<<<`);
-        }
-
-        if (options === undefined) {
-            options = TileOptions.fromObject(typeId, TileTypes[typeId]);
-        }
-
-        //
-        // Normalize options into a TileOptions object,
-        //
-        if (!(options instanceof TileOptions)) {
-            options = TileOptions.fromObject(typeId, options);
-        }
-
-        let optionPos = 0;
-        const properties = {};
-        const getOption = (name) => options.getValue(name, optionPos++);
-        for (let [key, val] of Object.entries(prototype)) {
-            properties[key] = val;
-            //
-            const fetchOption = typeof val === "symbol" && val.description.startsWith("REQUIRED_");
-
-            properties[key] = fetchOption ? getOption(key) : shallowCopy(val);
-        }
-
-        return new Tile(typeId, properties);
     }
 
     clone() {
@@ -324,6 +327,10 @@ export class Tile {
     }
 
     isWallLike() {
+        if (this.typeId === TileChars.WALL) {
+            return true;
+        }
+
         if (this.is === TileChars.WALL) {
             return true;
         }
@@ -333,6 +340,10 @@ export class Tile {
         }
 
         return this.looksLikeWall && !this.isTraversable;
+    }
+
+    isWall() {
+        return this.typeId === TileChars.WALL;
     }
 
     isFloorlike() {

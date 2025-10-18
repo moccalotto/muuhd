@@ -140,7 +140,7 @@ export class TileMap {
         return this.tiles[y][x];
     }
 
-    behavesLikeWall(x, y) {
+    isWallLike(x, y) {
         x |= 0;
         y |= 0;
 
@@ -161,7 +161,7 @@ export class TileMap {
      * @param {number} y
      * @returns {boolean}
      */
-    behavesLikeFloor(x, y) {
+    isFloorLike(x, y) {
         x |= 0;
         y |= 0;
 
