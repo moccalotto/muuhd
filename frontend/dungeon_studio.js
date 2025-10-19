@@ -2,17 +2,24 @@ import { CharType, TileMap } from "./ascii_tile_map";
 import { Tile, TileChars } from "./ascii_tile_types";
 import { Orientation } from "./ascii_types";
 
-class DungeonGenerator {
-    constructor(width, height, roomCount) {
-        this.roomCount = roomCount;
-        this.rooms = [];
-        this.corridors = [];
+/**
+ * @typedef {object} RoomConfig
+ * @property {number} x
+ * @property {number} y
+ * @property {number} width
+ * @property {number} height
+ */
 
-        // 2d array of pure wall tiles
-        const tiles = new Array(height).fill().map(() => Array(width).fill(Tile.createWall()));
+/** Dungeon Generator - generates TileMaps populated with rooms, traps, encounters, etc. */
+class DungeonFactory {
+    /** @type {number} */
+    roomCount;
 
-        this.map = new TileMap(tiles);
-    }
+    /** @type {RoomConfig[]} */
+    rooms;
+
+    /** @type {TileMap} */
+    map;
 
     get width() {
         return this.map.width;
@@ -20,6 +27,21 @@ class DungeonGenerator {
 
     get height() {
         return this.map.height;
+    }
+
+    /**
+     * @param {number} width
+     * @param {number} height
+     * @param {number} roomCount
+     */
+    constructor(width, height, roomCount) {
+        this.roomCount = roomCount | 0;
+        this.rooms = [];
+
+        // 2d array of pure wall tiles
+        const tiles = new Array(height | 0).fill().map(() => Array(width | 0).fill(Tile.createWall()));
+
+        this.map = new TileMap(tiles);
     }
 
     generate() {
@@ -407,26 +429,35 @@ class DungeonGenerator {
     }
 }
 
+/** @type {HTMLInputElement} */
+const widthEl = document.getElementById("width");
+/** @type {HTMLInputElement} */
+const heightEl = document.getElementById("height");
+/** @type {HTMLInputElement} */
+const roomCountEl = document.getElementById("roomCount");
+/** @type {HTMLElement} */
+const dungeonDisplayEl = document.getElementById("dungeonDisplay");
+
 /** @type {string} */
-window.currentDungeon = "";
+export let currentDungeon = "";
 
-window.generateDungeon = () => {
-    const width = parseInt(document.getElementById("width").value);
-    const height = parseInt(document.getElementById("height").value);
-    const roomCount = parseInt(document.getElementById("roomCount").value);
+export const generateDungeon = () => {
+    const width = parseInt(widthEl.value);
+    const height = parseInt(heightEl.value);
+    const roomCount = parseInt(roomCountEl.value);
 
-    const generator = new DungeonGenerator(width, height, roomCount);
-    window.currentDungeon = generator.generate();
+    const generator = new DungeonFactory(width, height, roomCount);
 
-    document.getElementById("dungeonDisplay").textContent = window.currentDungeon;
+    currentDungeon = generator.generate();
+    dungeonDisplayEl.textContent = currentDungeon;
 };
 
-window.downloadDungeon = () => {
-    if (!window.currentDungeon) {
-        window.generateDungeon();
+export const downloadDungeon = () => {
+    if (!currentDungeon) {
+        generateDungeon();
     }
 
-    const blob = new Blob([window.currentDungeon], { type: "text/plain" });
+    const blob = new Blob([currentDungeon], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -437,17 +468,17 @@ window.downloadDungeon = () => {
     URL.revokeObjectURL(url);
 };
 
-document.getElementById("width").addEventListener("input", function () {
+widthEl.addEventListener("input", function () {
     document.getElementById("widthValue").textContent = this.value;
 });
 
-document.getElementById("height").addEventListener("input", function () {
+heightEl.addEventListener("input", function () {
     document.getElementById("heightValue").textContent = this.value;
 });
 
-document.getElementById("roomCount").addEventListener("input", function () {
+roomCountEl.addEventListener("input", function () {
     document.getElementById("roomCountValue").textContent = this.value;
 });
 
 // Generate initial dungeon
-window.generateDungeon();
+generateDungeon();
