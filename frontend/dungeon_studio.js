@@ -482,3 +482,6 @@ roomCountEl.addEventListener("input", function () {
 
 // Generate initial dungeon
 generateDungeon();
+
+window.generateDungeon = generateDungeon;
+window.downloadDungeon = downloadDungeon;
