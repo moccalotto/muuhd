@@ -17,13 +17,22 @@ import { Player } from "./player.js";
 /** @typedef {import("./item.js").ItemBlueprint} ItemBlueprint */
 
 export class Game {
-    _counter = 1_000_000;
+    #counter = 1_000_000;
+    get counter() {
+        return this.#counter;
+    }
 
     /** @type {Map<string,ItemBlueprint>} List of all item blueprints in the game */
-    _itemBlueprints = new Map();
+    #itemBlueprints = new Map();
+    get itemBlueprints() {
+        return this.#itemBlueprints;
+    }
 
     /** @type {Map<string,Location>} The list of locations in the game */
-    _locations = new Map();
+    #locations = new Map();
+    get locations() {
+        return this.#locations;
+    }
 
     /**
      * The characters in the game.
@@ -31,34 +40,40 @@ export class Game {
      * @protected
      * @type {Map<string,Character>}
      */
-    _characters = new Map();
+    #characters = new Map();
+    get characters() {
+        return this.#characters;
+    }
 
     /*
      * @protected
      * @type {Map<string,Player>} Map of users in the game username->Player
      */
-    _players = new Map();
+    #players = new Map();
+    get players() {
+        return this.#players;
+    }
 
     /** @protected @type {Xorshift32} */
-    _random;
+    #random;
 
     /** @type {Xorshift32} */
     get random() {
-        return this._random;
+        return this.#random;
     }
 
     /** @param {number} rngSeed Seed number used for randomization */
-    constructor() {
-        this.rngSeed = Date.now();
+    constructor(rngSeed) {
+        this.seedRNG(rngSeed);
     }
 
-    set rngSeed(rngSeed) {
-        this._random = new Xorshift32(rngSeed);
+    seedRNG(rngSeed) {
+        this.#random = new Xorshift32(rngSeed);
     }
 
     getPlayerByUsername(username) {
         console.log("GETTING PLAYER: `%s`", username);
-        return this._players.get(username);
+        return this.#players.get(username);
     }
 
     /**
@@ -71,7 +86,7 @@ export class Game {
      * @returns {Player|null} Returns the player if username wasn't already taken, or null otherwise.
      */
     createPlayer(username, passwordHash = undefined, salt = undefined) {
-        if (this._players.has(username)) {
+        if (this.#players.has(username)) {
             return false;
         }
 
@@ -81,7 +96,7 @@ export class Game {
             typeof salt === "string" && salt.length > 0 ? salt : miniUid(),
         );
 
-        this._players.set(username, player);
+        this.#players.set(username, player);
 
         return player;
     }
@@ -99,7 +114,7 @@ export class Game {
             throw new Error("Invalid blueprintId!");
         }
 
-        const existing = this._itemBlueprints.get(blueprintId);
+        const existing = this.#itemBlueprints.get(blueprintId);
 
         if (existing) {
             console.warn("we tried to create the same item blueprint more than once", blueprintId, attributes);
@@ -110,7 +125,7 @@ export class Game {
 
         const result = new ItemBlueprint(attributes);
 
-        this._itemBlueprints.set(blueprintId, result);
+        this.#itemBlueprints.set(blueprintId, result);
 
         return result;
     }
@@ -123,6 +138,6 @@ export class Game {
         if (!isIdSane(blueprintId)) {
             throw new Error(`blueprintId >>${blueprintId}<< is not a valid id`);
         }
-        return this._itemBlueprints.get(blueprintId);
+        return this.#itemBlueprints.get(blueprintId);
     }
 }

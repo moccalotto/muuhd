@@ -9,28 +9,28 @@
  * or magical portals to distant locations.
  */
 export class Location {
-    /** @protected @type {string} */
-    _id;
+    /** @type {string} */
+    #id;
     get id() {
-        return this._id;
+        return this.#id;
     }
 
-    /** @protected @type {string} */
-    _name;
+    /** @type {string} */
+    #name;
     get name() {
-        return this._name;
+        return this.#name;
     }
 
-    /** @protected @type {string} */
-    _description;
+    /** @type {string} */
+    #description;
     get description() {
-        return this._description;
+        return this.#description;
     }
 
-    /** @protected @type {Map<string,Portal>} */
-    _portals = new Map();
+    /** @type {Map<string,Portal>} */
+    #portals = new Map();
     get portals() {
-        return this._portals;
+        return this.#portals;
     }
 
     /**
@@ -39,8 +39,8 @@ export class Location {
      * @param {string} description
      */
     constructor(id, name, description) {
-        this._id = id;
-        this._name = name;
-        this._description = description;
+        this.#id = id;
+        this.#name = name;
+        this.#description = description;
     }
 }

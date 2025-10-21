@@ -1,4 +1,4 @@
- const [XSgetSeed, XSgetNext, XSrand] = (() => {
+const [XSgetSeed, XSgetNext, XSrand] = (() => {
   const m = 2 ** 32;
   const XSgetSeed = () => Math.floor(Math.random() * (m - 1)) + 1;
   const s = Uint32Array.of(XSgetSeed());

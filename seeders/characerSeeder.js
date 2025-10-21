@@ -81,7 +81,7 @@ export class CharacterSeeder {
         c.name =
             gGame.random.oneOf("sir ", "madam ", "mister ", "miss ", "", "", "") + // prefix
             "random " + // name
-            gGame.random.get().toString(); // suffix
+            gGame.random.next().toString(); // suffix
 
         c.awareness = roll.d6() + 2;
         c.grit = roll.d6() + 2;
