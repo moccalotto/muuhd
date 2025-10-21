@@ -72,7 +72,7 @@ export class ItemBlueprint extends ItemAttributes {
 
         o.itemSlots = Number(o.itemSlots);
 
-        for (const [key, _] of Object.entries(this)) {
+        for (const [key] in this) {
             if (o[key] !== "undefied") {
                 this[key] = o[key];
             }

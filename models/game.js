@@ -102,7 +102,7 @@ export class Game {
         const existing = this._itemBlueprints.get(blueprintId);
 
         if (existing) {
-            console.debug("we tried to create the same item blueprint more than once", blueprintId, attributes);
+            console.warn("we tried to create the same item blueprint more than once", blueprintId, attributes);
             return existing;
         }
 

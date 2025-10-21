@@ -91,6 +91,13 @@ export class CharacterSeeder {
         c.rangedCombat = roll.d6() + 2;
         c.skulduggery = roll.d6() + 2;
 
+        this.applyAncestry(c);
+        this.applyFoundation(c);
+
+        return c;
+    }
+
+    applyAncestry(c) {
         let ancestryId = roll.d8();
         switch (ancestryId) {
             case 1:
@@ -135,12 +142,6 @@ export class CharacterSeeder {
             default:
                 throw new Error(`Logic error, ancestry d8() roll of ${ancestryId} was out of scope"`);
         }
-
-        this.applyFoundation(c);
-
-        console.debug(c);
-
-        return c;
     }
 
     /**
@@ -233,7 +234,7 @@ export class CharacterSeeder {
                 // Skills
                 this.addSkillsToCharacter(
                     c, //
-                    ":perk.two_weapons", // TODO: perks should be their own thing, and not a part of the skill system?
+                    ":weapon.style.two_weapons",
                     ":armor.light",
                 );
 
@@ -248,27 +249,40 @@ export class CharacterSeeder {
                     ":weapon.light.dagger",
                 );
                 break;
+            case 4:
+            case ":guard":
+                c.foundation = "Guard";
+
+                //
+                // Stats
+                c.maxHitPoints = c.currentHitPoints = 15;
+                c.meleeCombat = Math.max(c.meleeCombat, 10);
+                c.magic = Math.min(c.magic, 10);
+
+                //
+                // Skills
+                this.addSkillsToCharacter(
+                    c, //
+                    ":armor.medium",
+                    ":weapon.weird.halberd",
+                );
+
+                //
+                // Gear
+                c.silver = 50;
+                c.itemSlots = 5;
+                this.addItemsToCharacter(
+                    c, //
+                    ":armor.medium.breastplate",
+                    ":weapon.weird.halberd",
+                    ":lighting.bulls_eye_lantern",
+                    ":misc.signal_whistle",
+                    ":maps.area.hvedstad",
+                );
+                break;
 
             /*
 
-//
-//---------------------------------------------------------------------------------------
-//HEADLINE: Fencer
-//---------------------------------------------------------------------------------------
-| {counter:foundation}
-
-|Fencer
-
-|[unstyled]
-* Light Armor
-
-|[unstyled]
-* Leather
-* Rapier
-* Dagger
-* 40 Silver Pieces
-
-|[unstyled]
 
 //
 //---------------------------------------------------------------------------------------

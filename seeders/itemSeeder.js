@@ -8,7 +8,7 @@ import { gGame } from "../models/globals.js";
 // |___|\__\___|_| |_| |_|   |_|\___|_| |_| |_| .__/|_|\__,_|\__\___||___/
 //                                            |_|
 //
-// Seed the Game.ItemBlueprint store
+
 export class ItemSeeder {
     seed() {
         // __        __

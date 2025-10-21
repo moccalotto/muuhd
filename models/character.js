@@ -1,5 +1,3 @@
-import * as roll from "../utils/dice.js";
-import * as id from "../utils/id.js";
 import { Item } from "./item.js";
 
 /**
@@ -68,7 +66,7 @@ export class Character {
     /**
      * @param {string} name The name of the character
      */
-    constructor(name, initialize) {
+    constructor(name) {
         this.name = name;
     }
 

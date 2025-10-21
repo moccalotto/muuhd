@@ -1,17 +1,26 @@
-class Nugga {
-    mufassa = 22;
-    constructor() {
-        this.fjæsing = 22;
-        console.debug(Object.prototype.hasOwnProperty.call(this, "fjæsing"));
-    }
+let cnt = 0;
 
-    diller(snaps = this.fjæsing) {
-        console.log(snaps);
-    }
+let val = Math.floor(Math.random() * 5);
+
+switch (val) {
+    case cnt++:
+        console.log("zero");
+        break;
+    case cnt++:
+        console.log("one");
+        break;
+    case cnt++:
+        console.log("two");
+        break;
+    case cnt++:
+        console.log("three");
+        break;
+    case cnt++:
+        console.log("four");
+        break;
+    case cnt++:
+        console.log("five");
+        break;
+    default:
+        console.log("waaat", { val });
 }
-
-class Dugga extends Nugga {}
-
-const n = new Dugga();
-
-console.log(n, n.diller(), n instanceof Dugga);
