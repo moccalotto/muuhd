@@ -64,9 +64,7 @@ export class Scene {
         throw new Error("Abstract method must be implemented by subclass");
     }
 
-    /**
-     * @param {Prompt} prompt
-     */
+    /** @param {Prompt} prompt */
     showPrompt(prompt) {
         this.#currentPrompt = prompt;
         prompt.execute();
@@ -82,12 +80,14 @@ export class Scene {
      *
      * We route that message to the current prompt.
      *
-     * It should not be necessary to override this function
+     * You SHOULD NOT:
+     *  - call this method directly
+     *  - override this method
      *
      * @param {WebsocketMessage} message
      */
     onReply(message) {
-        console.log("REPLY", {
+        console.debug("REPLY", {
             message,
             type: typeof message,
         });
@@ -99,11 +99,12 @@ export class Scene {
      *
      * We route that message to the current prompt.
      *
-     * It should may be necessary to override this method
-     * in case you want to trigger specific behavior before
+     * It may be necessary to override this method in
+     * case you want to trigger specific behavior before
      * quitting.
      *
-     * Default behavior is to route this message to the current prompt.
+     * You SHOULD NOT:
+     *  - call this method directly
      */
     onQuit() {
         this.currentPrompt.onQuit();
@@ -119,6 +120,9 @@ export class Scene {
      * to be triggered - however, scenes should not have too
      * many prompts, so handling this behavior inside the prompt
      * should be the primary choice.
+     *
+     * You SHOULD NOT:
+     *  - call this method directly
      *
      * @param {WebsocketMessage} message
      */

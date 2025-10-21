@@ -1,26 +1,25 @@
-let cnt = 0;
+class TestParent {
+    someString = "foo";
 
-let val = Math.floor(Math.random() * 5);
-
-switch (val) {
-    case cnt++:
-        console.log("zero");
-        break;
-    case cnt++:
-        console.log("one");
-        break;
-    case cnt++:
-        console.log("two");
-        break;
-    case cnt++:
-        console.log("three");
-        break;
-    case cnt++:
-        console.log("four");
-        break;
-    case cnt++:
-        console.log("five");
-        break;
-    default:
-        console.log("waaat", { val });
+    constructor() {
+        console.log(this.someString);
+    }
 }
+
+class TestChild extends TestParent {
+    get someString() {
+        return "bar";
+    }
+
+    set someString(_val) {
+        console.log("was I called?");
+    }
+
+    constructor() {
+        super();
+        this.someString = "baz";
+        console.log(this.someString);
+    }
+}
+
+console.log(new TestChild());

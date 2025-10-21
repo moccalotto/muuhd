@@ -22,18 +22,17 @@ export class AuthenticationScene extends Scene {
     }
 
     /** @param {Player} player */
-    usernameAccepted(player) {
+    usernameSuccess(player) {
         this.player = player;
         this.session.sendSystemMessage("salt", player.salt);
         this.show(PasswordPrompt);
     }
 
-    passwordAccepted() {
+    passwordSuccess() {
         this.player.loggedIn = true;
 
         this.session.setPlayer(this.player);
-        this.session.sendText(["= Success!", "((but I don't know what to do now...))"]);
-        this.session.setScene(new GameScene());
+        this.session.setScene(new GameScene(this.session));
     }
 
     /**
@@ -46,6 +45,18 @@ export class AuthenticationScene extends Scene {
     }
 }
 
+//  _   _
+// | | | |___  ___ _ __ _ __   __ _ _ __ ___   ___
+// | | | / __|/ _ \ '__| '_ \ / _` | '_ ` _ \ / _ \
+// | |_| \__ \  __/ |  | | | | (_| | | | | | |  __/
+//  \___/|___/\___|_|  |_| |_|\__,_|_| |_| |_|\___|
+//
+//  ____                            _
+// |  _ \ _ __ ___  _ __ ___  _ __ | |_
+// | |_) | '__/ _ \| '_ ` _ \| '_ \| __|
+// |  __/| | | (_) | | | | | | |_) | |_
+// |_|   |_|  \___/|_| |_| |_| .__/ \__|
+//                           |_|
 class UsernamePrompt extends Prompt {
     //
     promptText = [
@@ -96,10 +107,23 @@ class UsernamePrompt extends Prompt {
 
         //
         // Tell daddy that we're done
-        this.scene.usernameAccepted(player);
+        this.scene.usernameSuccess(player);
     }
 }
 
+//
+//  ____                                     _
+// |  _ \ __ _ ___ _____      _____  _ __ __| |
+// | |_) / _` / __/ __\ \ /\ / / _ \| '__/ _` |
+// |  __/ (_| \__ \__ \\ V  V / (_) | | | (_| |
+// |_|   \__,_|___/___/ \_/\_/ \___/|_|  \__,_|
+//
+//  ____                            _
+// |  _ \ _ __ ___  _ __ ___  _ __ | |_
+// | |_) | '__/ _ \| '_ ` _ \| '_ \| __|
+// |  __/| | | (_) | | | | | | |_) | |_
+// |_|   |_|  \___/|_| |_| |_| .__/ \__|
+//                           |_|
 class PasswordPrompt extends Prompt {
     //
     promptText = "Please enter your password";
@@ -174,7 +198,6 @@ class PasswordPrompt extends Prompt {
         }
 
         // Password was correct, go to main game
-        // this.scene.passwordAccepted();
-        this.scene.passwordAccepted();
+        this.scene.passwordSuccess();
     }
 }
