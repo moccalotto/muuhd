@@ -81,6 +81,6 @@ class GameScenePlaceholderPrompt extends Prompt {
 
 
 = Welcome to Hovedstad
-(( type :quit to quit ))
+((type :quit to quit))
 `;
 }

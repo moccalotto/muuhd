@@ -22,15 +22,15 @@ const htmlEscapeRegex = /[&<>"'`]/g; // used to escape html characters
  * The order of the elements of this array matters.
  */
 const opcodes = [
-    ["(^|\\n)=", "($|\\n)", "$1<h1>$2</h1>$3"],
-    ["(^|\\n)==", "($|\\n)", "$1<h2>$2</h2>$3"],
-    ["---", "---", "<span class='strike'>$1</span>"],
-    ["___", "___", "<span class='underline'>$1</span>"],
-    ["(?:[,]{3})", "(?:[,]{3})", "<span class='undercurl'>$1</span>"],
-    ["(?:[(]{2})", "(?:[)]{2})", "<span class='faint'>$1</span>"],
-    ["_", "_", "<span class='italic'>$1</span>"],
-    ["\\*", "\\*", "<span class='bold'>$1</span>"],
-    ["\\[\\[([a-zA-Z0-9_ ]+)\\[\\[", "\\]\\]", "<span class='$1'>$2</span>"],
+    ["(^|\\n)=", "($|\\n)", "$1<h1>$2</h1>$3"], //                          lines with large headline begins with =
+    ["(^|\\n)==", "($|\\n)", "$1<h2>$2</h2>$3"], //                         lines with sub-headline begins with ==
+    ["---", "---", "<span class='strike'>$1</span>"], //                    ---trike through---
+    ["___", "___", "<span class='underline'>$1</span>"], //                 ___underline___
+    ["(?:[,]{3})", "(?:[,]{3})", "<span class='undercurl'>$1</span>"], //   ,,,undercurl,,,
+    ["(?:[(]{2})", "(?:[)]{2})", "<span class='faint'>$1</span>"], //       ((faint text))
+    ["_", "_", "<span class='italic'>$1</span>"], //                        _italic_
+    ["\\*", "\\*", "<span class='bold'>$1</span>"], //                      *bold*
+    ["\\[\\[([a-zA-Z0-9_ ]+)\\[\\[", "\\]\\]", "<span class='$1'>$2</span>"], // [[custom_class[[text with custom class]]
 ];
 /** @type{Array.Array.<Regexp,string>} */
 const regexes = [];
