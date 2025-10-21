@@ -25,12 +25,8 @@ export class CreateUsernamePrompt extends Prompt {
     // Let the client know that we're asking for a username
     promptOptions = { username: true };
 
-    /**
-     * @returns {PlayerCreationScene}
-     */
-    get scene() {
-        return this._scene;
-    }
+    /** @protected @type {PlayerCreationScene} */
+    _scene;
 
     onReply(username) {
         //
@@ -56,7 +52,7 @@ export class CreateUsernamePrompt extends Prompt {
         }
 
         //
-        // Tell daddy that we're done
-        this.scene.usernameAccepted(username);
+        // Tell owner that we're done
+        this._scene.usernameAccepted(username);
     }
 }

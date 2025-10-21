@@ -83,11 +83,14 @@ export const MessageType = Object.freeze({
  * @property {any[]} args
  */
 export class WebsocketMessage {
-    /** @protected @type {any[]} _arr The array that contains the message data */
+    /** @protected @type {any[]} The array that contains the message data */
     _data;
 
-    /** @constant @readonly @type {string} _arr The array that contains the message data */
+    /** @constant @readonly @type {string} The array that contains the message data */
     type;
+
+    /** @constant @readonly @type {string?} the text payload (if any) of the decoded message */
+    text;
 
     /**
      * @param {string} msgData the raw text data in the websocket message.
@@ -98,13 +101,12 @@ export class WebsocketMessage {
                 "Could not create client message. Attempting to parse json, but data was not even a string, it was a " +
                     typeof msgData,
             );
-            return;
         }
 
         let data;
         try {
             data = JSON.parse(msgData);
-        } catch (_) {
+        } catch {
             throw new Error(
                 `Could not create client message. Attempting to parse json, but data was invalid json: >>> ${msgData} <<<`,
             );

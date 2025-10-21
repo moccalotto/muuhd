@@ -16,7 +16,7 @@
  * - onColon(...)
  */
 export class Prompt {
-    /** @type {Scene} */
+    /** @protected @type {Scene} */
     _scene;
 
     /** @type {Scene} */
@@ -66,13 +66,6 @@ export class Prompt {
     /** @param {Scene} scene */
     constructor(scene) {
         this._scene = scene;
-
-        //
-        // Fix data formatting shorthand
-        // So lazy dev set property helpText = "fooo" instead of helpText = { "": "fooo" }.
-        if (typeof this.helpText === "string" || Array.isArray(this.helpText)) {
-            this.helpText = { "": this.helpText };
-        }
     }
 
     /**
@@ -86,10 +79,22 @@ export class Prompt {
 
     /** Triggered when user types `:help [some optional topic]` */
     onHelp(topic) {
+        //
+        // Fix data formatting shorthand
+        // So lazy dev set property helpText = "fooo" instead of helpText = { "": "fooo" }.
+        //
+        if (typeof this.helpText === "string" || Array.isArray(this.helpText)) {
+            this.helpText = { "": this.helpText };
+        }
+
         if (this.helpText[topic]) {
             this.sendText(this.helpText[topic]);
             return;
         }
+        console.log({
+            ht: this.helpText,
+            topic,
+        });
 
         this.onHelpFallback(topic);
     }
