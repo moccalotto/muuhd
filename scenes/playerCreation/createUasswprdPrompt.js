@@ -1,5 +1,5 @@
 import { Prompt } from "../prompt.js";
-import * as security from "../../utils/security.js";
+import { Security } from "../../utils/security.js";
 import { Config } from "../../config.js";
 
 export class CreatePasswordPrompt extends Prompt {
@@ -23,7 +23,7 @@ export class CreatePasswordPrompt extends Prompt {
         // not hashing an insane password 1000+ times.
         // This is technically bad practice, but since this is just a game,
         // do it anyway.
-        if (!security.isPasswordSane(text)) {
+        if (!Security.isPasswordSane(text)) {
             this.sendError("Insane password");
             this.execute();
             return;
@@ -50,7 +50,7 @@ export class CreatePasswordPrompt extends Prompt {
 
         //
         // Verify the password against the hash we've stored.
-        if (!security.verifyPassword(text, this.player.passwordHash)) {
+        if (!Security.verifyPassword(text, this.player.passwordHash)) {
             this.sendError("Incorrect password!");
             this.player.failedPasswordsSinceLastLogin++;
 

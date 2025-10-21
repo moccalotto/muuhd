@@ -34,7 +34,7 @@ export class GameScene extends Scene {
         // If player does not have a previous session
         // then we start in the Adventurers Guild in the Hovedstad
         //
-        this.doPrompt("new command prompt or whatever");
+        this.showBasicPrompt(this.castle);
     }
 
     get castle() {

@@ -21,10 +21,13 @@ export class Scene {
      */
     introText = "";
 
+    /** @constant @readonly @type {Prompt?} */
+    introPrompt;
+
     /** @readonly @constant @protected @type {Session} */
-    _session;
+    #session;
     get session() {
-        return this._session;
+        return this.#session;
     }
 
     /**
@@ -34,20 +37,26 @@ export class Scene {
      * @readonly
      * @type {Prompt}
      */
-    _currentPrompt;
+    #currentPrompt;
     get currentPrompt() {
-        return this._currentPrompt;
+        return this.#currentPrompt;
     }
 
     constructor() {}
 
     /** @param {Session} session */
     execute(session) {
-        this._session = session;
+        this.#session = session;
+
         if (this.introText) {
             this.session.sendText(this.introText);
         }
-        this.onReady();
+
+        if (this.introPrompt) {
+            this.showPrompt(this.introPrompt);
+        } else {
+            this.onReady();
+        }
     }
 
     /** @abstract */
@@ -59,7 +68,7 @@ export class Scene {
      * @param {Prompt} prompt
      */
     showPrompt(prompt) {
-        this._currentPrompt = prompt;
+        this.#currentPrompt = prompt;
         prompt.execute();
     }
 

@@ -1,5 +1,5 @@
 import { Prompt } from "../prompt.js";
-import * as security from "../../utils/security.js";
+import { Security } from "../../utils/security.js";
 import { gGame } from "../../models/globals.js";
 
 /** @typedef {import("./playerCreationScene.js").PlayerCreationScene} PlayerCreationScene */
@@ -35,7 +35,7 @@ export class CreateUsernamePrompt extends Prompt {
     onReply(username) {
         //
         // do basic syntax checks on usernames
-        if (!security.isUsernameSane(username)) {
+        if (!Security.isUsernameSane(username)) {
             console.info("Someone entered insane username: '%s'", username);
             this.sendError("Incorrect username, try again.");
             this.execute();
