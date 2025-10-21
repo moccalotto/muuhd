@@ -1,8 +1,10 @@
 import { sprintf } from "sprintf-js";
+import { Prompt } from "./prompt.js";
 
 /** @typedef {import("../utils/messages.js").WebsocketMessage} WebsocketMessage */
 /** @typedef {import("../models/session.js").Session} Session */
 /** @typedef {import("./prompt.js").Prompt } Prompt */
+/** @typedef {new (scene: Scene) => Prompt} PromptClassReference */
 
 /**
  * Scene - a class for showing one or more prompts in a row.
@@ -16,13 +18,8 @@ import { sprintf } from "sprintf-js";
  * @abstract
  */
 export class Scene {
-    /**
-     * @type {string|string[]} This text is shown when the scene begins
-     */
-    introText = "";
-
-    /** @constant @readonly @type {Prompt?} */
-    introPrompt;
+    /** @constant @readonly @type {string|string[]|PromptClassReference} Text or prompt to show when this scene begins */
+    intro;
 
     /** @readonly @constant @protected @type {Session} */
     #session;
@@ -47,21 +44,15 @@ export class Scene {
     /** @param {Session} session */
     execute(session) {
         this.#session = session;
-
-        if (this.introText) {
-            this.session.sendText(this.introText);
-        }
-
-        if (this.introPrompt) {
-            this.showPrompt(this.introPrompt);
-        } else {
-            this.onReady();
-        }
+        this.onReady();
     }
 
-    /** @abstract */
     onReady() {
-        throw new Error("Abstract method must be implemented by subclass");
+        if (!this.intro) {
+            return;
+        }
+
+        this.show(this.intro);
     }
 
     /** @param {Prompt} prompt */
@@ -70,9 +61,33 @@ export class Scene {
         prompt.execute();
     }
 
-    /** @param {new (scene: Scene) => Prompt} promptClassReference */
-    show(promptClassReference) {
-        this.showPrompt(new promptClassReference(this));
+    /** @param {string|string[]} text */
+    showText(text) {
+        this.session.sendText(text);
+    }
+
+    /** @param {PromptClassReference|string|string[]|Prompt} value */
+    show(value) {
+        if (value instanceof Prompt) {
+            this.showPrompt(value);
+            return;
+        }
+
+        if (typeof value === "string" || typeof value[0] === "string") {
+            this.showText(value);
+            return;
+        }
+
+        if (typeof value !== "function") {
+            throw new Error("Invalid type. Value must be string, string[], Prompt, or a class reference to Prompt");
+        }
+
+        const prompt = new value(this);
+        if (!(prompt instanceof Prompt)) {
+            throw new Error("Invalid class reference");
+        }
+
+        this.showPrompt(new value(this));
     }
 
     /**
@@ -91,6 +106,11 @@ export class Scene {
             message,
             type: typeof message,
         });
+
+        if (!this.currentPrompt) {
+            throw new Error("LogicError: cannot get a reply when you have not prompted the player");
+        }
+
         this.currentPrompt.onReply(message.text);
     }
 
@@ -107,7 +127,7 @@ export class Scene {
      *  - call this method directly
      */
     onQuit() {
-        this.currentPrompt.onQuit();
+        this.currentPrompt?.onQuit();
     }
 
     /**
@@ -127,7 +147,7 @@ export class Scene {
      * @param {WebsocketMessage} message
      */
     onHelp(message) {
-        this.currentPrompt.onHelp(message.text);
+        this.currentPrompt?.onHelp(message.text);
     }
 
     /**
@@ -185,7 +205,7 @@ export class Scene {
      * @param {WebsocketMessage} message
      */
     onColon(message) {
-        const handledByPrompt = this.currentPrompt.onColon(message.command, message.args);
+        const handledByPrompt = this.currentPrompt?.onColon(message.command, message.args);
 
         if (!handledByPrompt) {
             this.onColonFallback(message.command, message.args);
@@ -203,7 +223,7 @@ export class Scene {
         const n = Number(args[0]);
 
         this.session.sendText(
-            sprintf("%.2f centimeters is only %.2f inches. This is american wands are so short!", n, n / 2.54),
+            sprintf("%.2f centimeters is only %.2f inches. This is why american wands are so short!", n, n / 2.54),
         );
     }
 

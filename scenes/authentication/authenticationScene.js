@@ -10,14 +10,11 @@ import { gGame } from "../../models/globals.js";
 
 /** @property {Session} session */
 export class AuthenticationScene extends Scene {
-    introText = [
-        "= Welcome!", //
-    ];
-
     /** @type {Player} */
     player;
 
     onReady() {
+        this.session.sendText("= Welcome");
         this.show(UsernamePrompt);
     }
 

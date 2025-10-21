@@ -43,7 +43,7 @@ export class Prompt {
 
     /** @type {string|string[]} Default prompt text to send if we don't want to send something in the execute() call. */
     promptText = [
-        "Please enter some very important info", // Stupid placeholder text
+        "Please enter some very important info", // Silly placeholder text
         "((or type :quit to run away))", // strings in double parentheses is rendered shaded/faintly
     ];
 

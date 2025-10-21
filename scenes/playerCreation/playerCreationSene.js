@@ -5,7 +5,7 @@ import { Scene } from "../scene.js";
 import { CreateUsernamePrompt } from "./createUsernamePrompt.js";
 
 export class PlayerCreationScene extends Scene {
-    introText = "= Create Player";
+    intro = "= Create Player";
 
     /** @protected @type {Player} */
     player;

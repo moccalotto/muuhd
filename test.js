@@ -22,4 +22,4 @@ class TestChild extends TestParent {
     }
 }
 
-console.log(new TestChild());
+console.log(Function.prototype.toString.call(TestChild));
