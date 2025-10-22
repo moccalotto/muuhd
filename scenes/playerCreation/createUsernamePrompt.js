@@ -6,14 +6,14 @@ import { gGame } from "../../models/globals.js";
 
 export class CreateUsernamePrompt extends Prompt {
     //
-    promptText = [
+    message = [
         "Enter your username", //
         "((type *:help* for more info))", //
     ];
 
     //
     // When player types :help
-    helpText = [
+    help = [
         "Your username.",
         "It's used, along with your password, when you log in.",
         "Other players can see it.",
@@ -23,7 +23,7 @@ export class CreateUsernamePrompt extends Prompt {
 
     //
     // Let the client know that we're asking for a username
-    promptOptions = { username: true };
+    options = { username: true };
 
     /** @protected @type {PlayerCreationScene} */
     _scene;

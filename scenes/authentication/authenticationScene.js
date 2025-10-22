@@ -8,7 +8,6 @@ import { gGame } from "../../models/globals.js";
 
 /** @typedef {import("../../models/player.js").Player} Player */
 
-/** @property {Session} session */
 export class AuthenticationScene extends Scene {
     /** @type {Player} */
     player;
@@ -54,25 +53,24 @@ export class AuthenticationScene extends Scene {
 // |  __/| | | (_) | | | | | | |_) | |_
 // |_|   |_|  \___/|_| |_| |_| .__/ \__|
 //                           |_|
+/** @property {AuthenticationScene} scene */
 class UsernamePrompt extends Prompt {
     //
-    promptText = [
+    message = [
         "Please enter your username:", //
-        "(((type *:create* if you want to create a new user)))", //
+        "((type _*:help*_ to see your other options))",
     ];
 
     //
     // When player types :help
-    helpText = [
-        "This is where you log in.",
-        "If you don't already have a player profile on this server, you can type *:create* to create one",
+    help = [
+        "Enter your username to proceed with loggin in",
+        "Type _*:create*_ if you are not already registered, and want to create a new account",
+        "Only a username and password is required - not your email",
     ];
+    options = { username: true };
 
-    //
-    // Let the client know that we're asking for a username
-    promptOptions = { username: true };
-
-    /** @returns {AuthenticationScene} */
+    /** @returns {AuthenticationScene} workaround for proper type hinting */
     get scene() {
         return this._scene;
     }
@@ -123,12 +121,8 @@ class UsernamePrompt extends Prompt {
 //                           |_|
 class PasswordPrompt extends Prompt {
     //
-    promptText = "Please enter your password";
-
-    //
-    // Let the client know that we're asking for a password
-    // so it can set <input type="password">
-    promptOptions = { password: true };
+    message = "Please enter your password";
+    options = { password: true };
 
     get player() {
         return this.scene.player;

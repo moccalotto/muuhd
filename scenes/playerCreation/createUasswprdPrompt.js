@@ -4,12 +4,12 @@ import { Config } from "../../config.js";
 
 export class CreatePasswordPrompt extends Prompt {
     //
-    promptText = ["Enter a password"];
+    message = ["Enter a password"];
 
     //
     // Let the client know that we're asking for a password
     // so it can set <input type="password">
-    promptOptions = { password: true };
+    options = { password: true };
 
     get player() {
         return this.scene.player;

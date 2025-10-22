@@ -30,19 +30,24 @@ export class Prompt {
      * Values: string containing the help text
      *
      * If you want truly custom help texts, you must override the onHelpFallback function,
-     * but overriding the onHelp() function gives you more control and skips this helpText
+     * but overriding the onHelp() function gives you more control and skips this help
      * dictionary entirely.
      *
      * @constant
      * @readonly
      * @type {Record<string, string|string[]>}
      */
-    helpText = {
-        "": "Sorry, no help available. Figure it out yourself, adventurer", // default help text
-    };
+    help = {};
 
-    /** @type {string|string[]} Default prompt text to send if we don't want to send something in the execute() call. */
-    promptText = [
+    /**
+     * Default prompt text to send if we don't want to send something in the execute() call.
+     *
+     * Array values will be converted to multiline strings with newlines between each string
+     * in the array.
+     *
+     * @type {string|string[]}
+     */
+    message = [
         "Please enter some very important info", // Silly placeholder text
         "((or type :quit to run away))", // strings in double parentheses is rendered shaded/faintly
     ];
@@ -51,12 +56,12 @@ export class Prompt {
     /* @example
      *
      * // if the prompt expects a username
-     * promptOptions = { username : true };
+     * options = { username : true };
      *
      * // if the prompt expects a password
-     * promptOptions = { password : true };
+     * options = { password : true };
      */
-    promptOptions = {};
+    options = {};
 
     /** @type {Session} */
     get session() {
@@ -74,27 +79,36 @@ export class Prompt {
      * It's here you want to send the prompt text via the sendPrompt() method
      */
     execute() {
-        this.sendPrompt(this.promptText, this.promptOptions);
+        this.prepareProperties();
+
+        this.sendPrompt(this.message, this.options);
+    }
+
+    /**
+     * Normalize / massage the properties of the Prompt.
+     *
+     * This function cannot be called from the Prompt base constructor, as the
+     * properties of the child class have not been set yet.
+     */
+    prepareProperties() {
+        //
+        // Lazy dev set property help = "fooo" instead of help = { "": "fooo" }.
+        if (this.help && (typeof this.help === "string" || Array.isArray(this.help))) {
+            this.help = { "": this.help };
+        }
     }
 
     /** Triggered when user types `:help [some optional topic]` */
     onHelp(topic) {
-        //
-        // Fix data formatting shorthand
-        // So lazy dev set property helpText = "fooo" instead of helpText = { "": "fooo" }.
-        //
-        if (typeof this.helpText === "string" || Array.isArray(this.helpText)) {
-            this.helpText = { "": this.helpText };
-        }
-
-        if (this.helpText[topic]) {
-            this.sendText(this.helpText[topic]);
+        if (!this.help) {
+            this.sendText("No help available at this moment - figure it out yourself, adventurer");
             return;
         }
-        console.log({
-            ht: this.helpText,
-            topic,
-        });
+
+        if (this.help[topic]) {
+            this.sendText(this.help[topic]);
+            return;
+        }
 
         this.onHelpFallback(topic);
     }

@@ -398,14 +398,14 @@ class MUDClient {
     // prompted.
     // In fact, we should ALWAYS be in a state of just-having-been-prompted.
     handlePromptMessage(data) {
-        let [promptText, options = {}] = data;
+        let [prompt, options = {}] = data;
 
         this.shouldReply = true;
 
         this.promptOptions = { ...{ class: "prompt" }, ...options };
 
         //
-        this.writeToOutput(promptText, this.promptOptions);
+        this.writeToOutput(prompt, this.promptOptions);
 
         //
         // The server has asked for a password, so we set the

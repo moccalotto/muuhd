@@ -38,7 +38,7 @@ export class GameScene extends Scene {
 }
 
 class GameScenePlaceholderPrompt extends Prompt {
-    promptText = `
+    message = `
                                                 ▄
                                                 █▐▀▀▀▌▄
                                                 █      ▐▀▀▀▌▌▓▌
