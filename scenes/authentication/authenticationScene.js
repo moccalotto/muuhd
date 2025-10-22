@@ -1,7 +1,7 @@
 import { Security } from "../../utils/security.js";
 import { Config } from "../../config.js";
 import { GameScene } from "../gameLoop/gameScene.js";
-import { PlayerCreationScene } from "../playerCreation/playerCreationSene.js";
+import { PlayerCreationScene } from "../playerCreation/playerCreationScene.js";
 import { Prompt } from "../prompt.js";
 import { Scene } from "../scene.js";
 import { gGame } from "../../models/globals.js";

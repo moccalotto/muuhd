@@ -16,7 +16,7 @@ export class PlayerCreationScene extends Scene {
     onReady() {
         //
         // If there are too many players, stop allowing new players in.
-        if (gGame._players.size >= Config.maxPlayers) {
+        if (gGame.players.size >= Config.maxPlayers) {
             this.session.calamity("Server is full, no more players can be created");
         }
 
