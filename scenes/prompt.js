@@ -1,5 +1,4 @@
 /** @typedef {import("../models/session.js").Session} Session */
-/** @typedef {import("../utils/message.js").MessageType} MessageType */
 /** @typedef {import("../utils/message.js").WebsocketMessage} WebsocketMessage */
 /** @typedef {import("./scene.js").Scene} Scene */
 
@@ -65,7 +64,7 @@ export class Prompt {
 
     /** @type {Session} */
     get session() {
-        return this.scene.session;
+        return this._scene.session;
     }
 
     /** @param {Scene} scene */
@@ -80,6 +79,7 @@ export class Prompt {
      */
     execute() {
         this.prepareProperties();
+        this.beforeExecute();
 
         this.sendPrompt(this.message, this.options);
     }
@@ -97,6 +97,8 @@ export class Prompt {
             this.help = { "": this.help };
         }
     }
+
+    beforeExecute() {}
 
     /** Triggered when user types `:help [some optional topic]` */
     onHelp(topic) {

@@ -147,9 +147,11 @@ class PasswordPrompt extends Prompt {
             return;
         }
 
+        const player = this.scene.player;
+
         //
         // Block users who enter bad passwords too many times.
-        if (this.player.failedPasswordsSinceLastLogin > Config.maxFailedLogins) {
+        if (player.failedPasswordsSinceLastLogin > Config.maxFailedLogins) {
             this.blockedUntil = Date.now() + Config.accountLockoutSeconds * 1000;
             this.calamity("You have been locked out for too many failed password attempts, come back later");
             return;
@@ -158,7 +160,7 @@ class PasswordPrompt extends Prompt {
         //
         // Handle blocked users.
         // They don't even get to have their password verified.
-        if (this.player.blockedUntil > Date.now()) {
+        if (player.blockedUntil > Date.now()) {
             //
             // Try to re-login too soon, and your lockout lasts longer.
             this.blockedUntil += Config.accountLockoutSeconds * 1000;
@@ -168,23 +170,23 @@ class PasswordPrompt extends Prompt {
 
         //
         // Verify the password against the hash we've stored.
-        if (!Security.verifyPassword(text, this.player.passwordHash)) {
+        if (!Security.verifyPassword(text, player.passwordHash)) {
             this.sendError("Incorrect password!");
-            this.player.failedPasswordsSinceLastLogin++;
+            player.failedPasswordsSinceLastLogin++;
 
-            this.session.sendDebug(`Failed login attempt #${this.player.failedPasswordsSinceLastLogin}`);
+            this.session.sendDebug(`Failed login attempt #${player.failedPasswordsSinceLastLogin}`);
             this.execute();
 
             return;
         }
 
-        this.player.lastSucessfulLoginAt = new Date();
-        this.player.failedPasswordsSinceLastLogin = 0;
+        player.lastSucessfulLoginAt = new Date();
+        player.failedPasswordsSinceLastLogin = 0;
 
         //
         // We do not allow a player to be logged in more than once!
-        if (this.player.loggedIn) {
-            this.calamity("This player is already logged in");
+        if (player.loggedIn) {
+            this.calamity("player is already logged in");
             return;
         }
 

@@ -1,7 +1,7 @@
 import { Player } from "./player.js";
 import { mustBeString, mustBe } from "../utils/mustbe.js";
 import { Scene } from "../scenes/scene.js";
-import { formatMessage, MessageType } from "../utils/messages.js";
+import * as Messages from "../utils/messages.js";
 
 /** @typedef {import("ws").WebSocket} WebSocket */
 
@@ -42,7 +42,7 @@ export class Session {
      * @param {Scene} scene
      */
     setScene(scene) {
-        console.debug("changing scene", scene.constructor.name);
+        console.debug("Changing scene", { scene: scene.constructor.name });
         if (!(scene instanceof Scene)) {
             throw new Error(`Expected instance of Scene, got a ${typeof scene}: >>${scene}<<`);
         }
@@ -91,7 +91,7 @@ export class Session {
             console.error("Trying to send a message without a valid websocket", messageType, args);
             return;
         }
-        this._websocket.send(formatMessage(messageType, ...args));
+        this._websocket.send(Messages.formatMessage(messageType, ...args));
     }
 
     /**
@@ -112,7 +112,7 @@ export class Session {
         }
 
         this.send(
-            MessageType.PROMPT, // message type
+            Messages.PROMPT, // message type
             text, // TODO: prompt text must be string or an array of strings
             mustBe(options, "object"),
         );
@@ -125,12 +125,17 @@ export class Session {
      * @param {object?} options message options for the client.
      */
     sendText(text, options = {}) {
-        this.send(MessageType.TEXT, text, options);
+        this.send(Messages.TEXT, text, options);
     }
 
     /** @param {string|string[]} errorMessage */
     sendError(errorMessage, options = { verbatim: true, error: true }) {
-        this.send(MessageType.ERROR, mustBeString(errorMessage), options);
+        this.send(Messages.ERROR, mustBeString(errorMessage), options);
+    }
+
+    /** @param {string|string[]} debugMessage */
+    sendDebug(debugMessage, options = { verbatim: true, debug: true }) {
+        this.send(Messages.DEBUG, debugMessage, options);
     }
 
     /**
@@ -141,7 +146,7 @@ export class Session {
         //
         // The client should know not to format calamaties anyway, but we add “preformatted” anyway
         console.info("CALAMITY", errorMessage);
-        this.send(MessageType.CALAMITY, errorMessage, { verbatim: true, calamity: true });
+        this.send(Messages.CALAMITY, errorMessage, { verbatim: true, calamity: true });
         this.close();
     }
 
@@ -150,6 +155,6 @@ export class Session {
      * @param {any?} value
      */
     sendSystemMessage(systemMessageType, value = undefined) {
-        this.send(MessageType.SYSTEM, mustBeString(systemMessageType), value);
+        this.send(Messages.SYSTEM, mustBeString(systemMessageType), value);
     }
 }

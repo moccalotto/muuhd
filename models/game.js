@@ -9,6 +9,7 @@
 
 import { isIdSane, miniUid } from "../utils/id.js";
 import { Xorshift32 } from "../utils/random.js";
+import { Security } from "../utils/security.js";
 import { ItemBlueprint } from "./item.js";
 import { Player } from "./player.js";
 
@@ -83,18 +84,17 @@ export class Game {
      * @param {string?} passwordHash
      * @param {string?} salt
      *
-     * @returns {Player|null} Returns the player if username wasn't already taken, or null otherwise.
+     * @returns {Player|false} Returns the player if username wasn't already taken, or null otherwise.
      */
     createPlayer(username, passwordHash = undefined, salt = undefined) {
         if (this.#players.has(username)) {
             return false;
         }
 
-        const player = new Player(
-            username,
-            typeof passwordHash === "string" ? passwordHash : "",
-            typeof salt === "string" && salt.length > 0 ? salt : miniUid(),
-        );
+        passwordHash ??= "";
+        salt ??= Security.generateHash(miniUid());
+
+        const player = new Player(username, passwordHash, salt);
 
         this.#players.set(username, player);
 
